@@ -8,18 +8,18 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0a0f1a;
-    --surface: #111827;
-    --surface2: #1a2234;
-    --border: #1e2d45;
-    --accent: #38bdf8;
-    --accent2: #f59e0b;
-    --accent3: #34d399;
-    --text: #e2e8f0;
+    --bg: #f5f7fa;
+    --surface: #ffffff;
+    --surface2: #f0f2f5;
+    --border: #e2e6ec;
+    --accent: #2563eb;
+    --accent2: #d97706;
+    --accent3: #059669;
+    --text: #1e293b;
     --muted: #64748b;
-    --rain: #818cf8;
-    --wind: #34d399;
-    --feels: #f59e0b;
+    --rain: #6366f1;
+    --wind: #059669;
+    --feels: #d97706;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -37,8 +37,8 @@
     position: fixed;
     top: -50%; left: -50%;
     width: 200%; height: 200%;
-    background: radial-gradient(ellipse at 20% 20%, rgba(56,189,248,0.04) 0%, transparent 50%),
-                radial-gradient(ellipse at 80% 80%, rgba(52,211,153,0.04) 0%, transparent 50%);
+    background: radial-gradient(ellipse at 20% 20%, rgba(37,99,235,0.03) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 80%, rgba(5,150,105,0.03) 0%, transparent 50%);
     pointer-events: none;
     z-index: 0;
   }
@@ -75,8 +75,8 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    background: rgba(52,211,153,0.1);
-    border: 1px solid rgba(52,211,153,0.3);
+    background: rgba(5,150,105,0.08);
+    border: 1px solid rgba(5,150,105,0.3);
     color: var(--accent3);
     font-size: 11px;
     font-family: 'Space Mono', monospace;
@@ -112,7 +112,7 @@
   }
 
   .time-btn:hover { border-color: var(--accent); color: var(--accent); }
-  .time-btn.active { background: rgba(56,189,248,0.1); border-color: var(--accent); color: var(--accent); }
+  .time-btn.active { background: rgba(37,99,235,0.08); border-color: var(--accent); color: var(--accent); }
 
   .section-label {
     font-family: 'Space Mono', monospace;
@@ -382,11 +382,11 @@
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: '#1a2234',
-        borderColor: '#1e2d45',
+        backgroundColor: '#ffffff',
+        borderColor: '#e2e6ec',
         borderWidth: 1,
         titleColor: '#64748b',
-        bodyColor: '#e2e8f0',
+        bodyColor: '#1e293b',
         titleFont: { family: 'Space Mono', size: 10 },
         bodyFont: { family: 'DM Sans', size: 12 },
         padding: 10,
@@ -394,11 +394,11 @@
     },
     scales: {
       x: {
-        grid: { color: 'rgba(30,45,69,0.8)' },
+        grid: { color: 'rgba(226,230,236,0.8)' },
         ticks: { color: '#64748b', font: { family: 'Space Mono', size: 9 }, maxTicksLimit: 8 }
       },
       y: {
-        grid: { color: 'rgba(30,45,69,0.8)' },
+        grid: { color: 'rgba(226,230,236,0.8)' },
         ticks: { color: '#64748b', font: { family: 'Space Mono', size: 9 } }
       }
     }
@@ -453,27 +453,44 @@
   async function fetchRecords() {
     const base = `${SUPABASE_URL}/rest/v1/weather_data`;
     const [hotR, coldR, rainR, gustR] = await Promise.all([
-      fetch(`${base}?select=temp_outdoor,recorded_at&order=temp_outdoor.desc&limit=1`, {headers:H}),
-      fetch(`${base}?select=temp_outdoor,recorded_at&order=temp_outdoor.asc&limit=1`,  {headers:H}),
-      fetch(`${base}?select=rain_daily,recorded_at&order=rain_daily.desc&limit=1`,     {headers:H}),
-      fetch(`${base}?select=wind_gust,recorded_at&order=wind_gust.desc&limit=1`,       {headers:H}),
+      fetch(`${base}?select=temp_outdoor,recorded_at&temp_outdoor=not.is.null&order=temp_outdoor.desc.nullslast&limit=1`, {headers:H}),
+      fetch(`${base}?select=temp_outdoor,recorded_at&temp_outdoor=not.is.null&order=temp_outdoor.asc.nullslast&limit=1`,  {headers:H}),
+      fetch(`${base}?select=rain_daily,recorded_at&rain_daily=not.is.null&order=rain_daily.desc.nullslast&limit=1`,     {headers:H}),
+      fetch(`${base}?select=wind_gust,recorded_at&wind_gust=not.is.null&order=wind_gust.desc.nullslast&limit=1`,       {headers:H}),
     ]);
     const [hot, cold, rain, gust] = await Promise.all([hotR.json(), coldR.json(), rainR.json(), gustR.json()]);
     return { hot: hot[0], cold: cold[0], rain: rain[0], gust: gust[0] };
   }
 
   async function fetchYTD() {
-    const jan1 = new Date(new Date().getFullYear(), 0, 1).toISOString();
+    // Sum peak rain_monthly from the last day of each completed month + current month
     const base = `${SUPABASE_URL}/rest/v1/weather_data`;
-    const [latestR, jan1R] = await Promise.all([
-      fetch(`${base}?select=rain_total&order=recorded_at.desc&limit=1`, {headers:H}),
-      fetch(`${base}?select=rain_total&recorded_at=gte.${jan1}&order=recorded_at.asc&limit=1`, {headers:H}),
-    ]);
-    const [latest, jan1data] = await Promise.all([latestR.json(), jan1R.json()]);
-    if (latest[0]?.rain_total != null && jan1data[0]?.rain_total != null) {
-      return (latest[0].rain_total - jan1data[0].rain_total).toFixed(2);
+    const year = new Date().getFullYear();
+    const currentMonth = new Date().getMonth(); // 0-indexed
+    let ytd = 0;
+
+    // For each completed month, get the max rain_monthly (last reading of that month)
+    const fetches = [];
+    for (let m = 0; m < currentMonth; m++) {
+      const start = new Date(year, m, 1).toISOString();
+      const end = new Date(year, m + 1, 1).toISOString();
+      fetches.push(
+        fetch(`${base}?select=rain_monthly&rain_monthly=not.is.null&recorded_at=gte.${start}&recorded_at=lt.${end}&order=recorded_at.desc&limit=1`, {headers:H})
+          .then(r => r.json())
+      );
     }
-    return '--';
+    // Current month's rain_monthly from latest reading
+    const curStart = new Date(year, currentMonth, 1).toISOString();
+    fetches.push(
+      fetch(`${base}?select=rain_monthly&rain_monthly=not.is.null&recorded_at=gte.${curStart}&order=recorded_at.desc&limit=1`, {headers:H})
+        .then(r => r.json())
+    );
+
+    const results = await Promise.all(fetches);
+    for (const res of results) {
+      if (res[0]?.rain_monthly != null) ytd += res[0].rain_monthly;
+    }
+    return ytd > 0 ? ytd.toFixed(2) : '--';
   }
 
   async function loadData() {
@@ -506,13 +523,13 @@
       <div class="cards-grid">
         <div class="card">
           <div class="card-label">Temperature</div>
-          <div class="card-value">${fmt(latest.temp_outdoor)}<span>°F</span></div>
-          <div class="card-sub">Indoor: ${fmt(latest.temp_indoor)}°F</div>
+          <div class="card-value">${fmt(latest.temp_outdoor,1)}<span>°F</span></div>
+          <div class="card-sub">Indoor: ${fmt(latest.temp_indoor,1)}°F</div>
         </div>
         <div class="card">
           <div class="card-label">Feels Like</div>
-          <div class="card-value">${fmt(latest.feels_like)}<span>°F</span></div>
-          <div class="card-sub">Dew point: ${fmt(latest.dew_point)}°F</div>
+          <div class="card-value">${fmt(latest.feels_like,1)}<span>°F</span></div>
+          <div class="card-sub">Dew point: ${fmt(latest.dew_point,1)}°F</div>
         </div>
         <div class="card">
           <div class="card-label">Humidity</div>
@@ -521,18 +538,18 @@
         </div>
         <div class="card">
           <div class="card-label">Wind</div>
-          <div class="card-value">${fmt(latest.wind_speed)}<span>mph</span></div>
-          <div class="card-sub">Gust: ${fmt(latest.wind_gust)} mph<br>${windDir(latest.wind_direction)}</div>
+          <div class="card-value">${fmt(latest.wind_speed,1)}<span>mph</span></div>
+          <div class="card-sub">Gust: ${fmt(latest.wind_gust,1)} mph<br>${windDir(latest.wind_direction)}</div>
         </div>
         <div class="card">
           <div class="card-label">UV Index</div>
           <div class="card-value">${latest.uv_index ?? '--'}</div>
-          <div class="card-sub">Solar: ${fmt(latest.solar_radiation)} W/m²</div>
+          <div class="card-sub">Solar: ${fmt(latest.solar_radiation,1)} W/m²</div>
         </div>
         <div class="card">
           <div class="card-label">Pressure</div>
-          <div class="card-value">${fmt(latest.pressure_relative)}<span>in</span></div>
-          <div class="card-sub">Absolute: ${fmt(latest.pressure_absolute)} in</div>
+          <div class="card-value">${fmt(latest.pressure_relative,2)}<span>in</span></div>
+          <div class="card-sub">Absolute: ${fmt(latest.pressure_absolute,2)} in</div>
         </div>
       </div>
 
@@ -540,21 +557,20 @@
       <div class="rain-grid">
         <div class="rain-card">
           <div class="card-label">Today</div>
-          <div class="record-value">${fmt(latest.rain_daily)}<span> in</span></div>
-          <div class="record-date">Last hour: ${fmt(latest.rain_hourly)} in</div>
+          <div class="record-value">${fmt(latest.rain_daily,2)}<span> in</span></div>
+          <div class="record-date">Last hour: ${fmt(latest.rain_hourly,2)} in</div>
         </div>
         <div class="rain-card">
           <div class="card-label">This Week</div>
-          <div class="record-value">${fmt(latest.rain_weekly)}<span> in</span></div>
+          <div class="record-value">${fmt(latest.rain_weekly,2)}<span> in</span></div>
         </div>
         <div class="rain-card">
           <div class="card-label">This Month</div>
-          <div class="record-value">${fmt(latest.rain_monthly)}<span> in</span></div>
+          <div class="record-value">${fmt(latest.rain_monthly,2)}<span> in</span></div>
         </div>
         <div class="rain-card">
           <div class="card-label">YTD ${new Date().getFullYear()}</div>
           <div class="record-value">${ytdRain}<span> in</span></div>
-          <div class="record-date">All-time total: ${fmt(latest.rain_total)} in</div>
         </div>
       </div>
 
@@ -562,22 +578,22 @@
       <div class="records-grid">
         <div class="record-card">
           <div class="card-label">Hottest Reading</div>
-          <div class="record-value">${fmt(records.hot?.temp_outdoor)}<span>°F</span></div>
+          <div class="record-value">${fmt(records.hot?.temp_outdoor,1)}<span>°F</span></div>
           <div class="record-date">${records.hot ? formatDate(records.hot.recorded_at) : '--'}</div>
         </div>
         <div class="record-card">
           <div class="card-label">Coldest Reading</div>
-          <div class="record-value">${fmt(records.cold?.temp_outdoor)}<span>°F</span></div>
+          <div class="record-value">${fmt(records.cold?.temp_outdoor,1)}<span>°F</span></div>
           <div class="record-date">${records.cold ? formatDate(records.cold.recorded_at) : '--'}</div>
         </div>
         <div class="record-card">
           <div class="card-label">Rainiest Day</div>
-          <div class="record-value">${fmt(records.rain?.rain_daily)}<span> in</span></div>
+          <div class="record-value">${fmt(records.rain?.rain_daily,2)}<span> in</span></div>
           <div class="record-date">${records.rain ? formatDate(records.rain.recorded_at) : '--'}</div>
         </div>
         <div class="record-card">
           <div class="card-label">Strongest Gust</div>
-          <div class="record-value">${fmt(records.gust?.wind_gust)}<span> mph</span></div>
+          <div class="record-value">${fmt(records.gust?.wind_gust,1)}<span> mph</span></div>
           <div class="record-date">${records.gust ? formatDate(records.gust.recorded_at) : '--'}</div>
         </div>
       </div>
@@ -588,8 +604,8 @@
           <div class="chart-header">
             <div class="chart-title">Temperature</div>
             <div class="chart-legend">
-              <div class="legend-item"><div class="legend-dot" style="background:#38bdf8"></div>Actual</div>
-              <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div>Feels Like</div>
+              <div class="legend-item"><div class="legend-dot" style="background:#2563eb"></div>Actual</div>
+              <div class="legend-item"><div class="legend-dot" style="background:#d97706"></div>Feels Like</div>
             </div>
           </div>
           <div class="chart-wrap"><canvas id="tempChart"></canvas></div>
@@ -598,8 +614,8 @@
           <div class="chart-header">
             <div class="chart-title">Rainfall</div>
             <div class="chart-legend">
-              <div class="legend-item"><div class="legend-dot" style="background:#818cf8"></div>Hourly</div>
-              <div class="legend-item"><div class="legend-dot" style="background:#a78bfa"></div>Daily Total</div>
+              <div class="legend-item"><div class="legend-dot" style="background:#6366f1"></div>Hourly</div>
+              <div class="legend-item"><div class="legend-dot" style="background:#6366f1"></div>Daily Total</div>
             </div>
           </div>
           <div class="chart-wrap"><canvas id="rainChart"></canvas></div>
@@ -608,8 +624,8 @@
           <div class="chart-header">
             <div class="chart-title">Wind</div>
             <div class="chart-legend">
-              <div class="legend-item"><div class="legend-dot" style="background:#34d399"></div>Speed</div>
-              <div class="legend-item"><div class="legend-dot" style="background:#6ee7b7"></div>Gust</div>
+              <div class="legend-item"><div class="legend-dot" style="background:#059669"></div>Speed</div>
+              <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div>Gust</div>
             </div>
           </div>
           <div class="chart-wrap"><canvas id="windChart"></canvas></div>
@@ -629,10 +645,10 @@
       type: 'line',
       data: { labels, datasets: [
         { label: 'Temperature', data: rows.map(r => r.temp_outdoor),
-          borderColor: '#38bdf8', backgroundColor: 'rgba(56,189,248,0.06)',
+          borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.08)',
           borderWidth: 2, pointRadius: 0, tension: 0.4, fill: true },
         { label: 'Feels Like', data: rows.map(r => r.feels_like),
-          borderColor: '#f59e0b', borderWidth: 1.5, pointRadius: 0,
+          borderColor: '#d97706', borderWidth: 1.5, pointRadius: 0,
           tension: 0.4, borderDash: [4,3], fill: false }
       ]},
       options: { ...chartDefaults, scales: { ...chartDefaults.scales,
@@ -643,9 +659,9 @@
       type: 'bar',
       data: { labels, datasets: [
         { label: 'Hourly Rain', data: rows.map(r => r.rain_hourly),
-          backgroundColor: 'rgba(129,140,248,0.7)', borderRadius: 2 },
+          backgroundColor: 'rgba(99,102,241,0.6)', borderRadius: 2 },
         { label: 'Daily Total', data: rows.map(r => r.rain_daily),
-          backgroundColor: 'rgba(167,139,250,0.15)', borderColor: 'rgba(167,139,250,0.5)',
+          backgroundColor: 'rgba(99,102,241,0.08)', borderColor: 'rgba(99,102,241,0.5)',
           borderWidth: 1, type: 'line', pointRadius: 0, tension: 0.4, fill: false }
       ]},
       options: { ...chartDefaults, scales: { ...chartDefaults.scales,
@@ -656,10 +672,10 @@
       type: 'line',
       data: { labels, datasets: [
         { label: 'Wind Speed', data: rows.map(r => r.wind_speed),
-          borderColor: '#34d399', backgroundColor: 'rgba(52,211,153,0.06)',
+          borderColor: '#059669', backgroundColor: 'rgba(5,150,105,0.08)',
           borderWidth: 2, pointRadius: 0, tension: 0.4, fill: true },
         { label: 'Wind Gust', data: rows.map(r => r.wind_gust),
-          borderColor: '#6ee7b7', borderWidth: 1.5, pointRadius: 0,
+          borderColor: '#10b981', borderWidth: 1.5, pointRadius: 0,
           tension: 0.4, borderDash: [4,3], fill: false }
       ]},
       options: { ...chartDefaults, scales: { ...chartDefaults.scales,
