@@ -1,916 +1,1022 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The Bird Feeder — Eugene, OR Weather</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<style>
-  :root {
-    --bg-primary: #f5f7fa;
-    --bg-secondary: #ffffff;
-    --bg-tertiary: #f0f2f5;
-    --text-primary: #1a1a2e;
-    --text-secondary: #4a5568;
-    --text-muted: #718096;
-    --border-color: #e2e8f0;
-    --border-light: #edf2f7;
-    --shadow: 0 2px 8px rgba(0,0,0,0.08);
-    --card-bg: #ffffff;
-    --accent: #3182ce;
-    --accent-light: #ebf8ff;
-    --green: #38a169;
-    --red: #e53e3e;
-    --orange: #dd6b20;
-    --purple: #805ad5;
-    --chart-temp: #3182ce;
-    --chart-feels: #dd6b20;
-    --chart-rain: #805ad5;
-    --chart-rain-light: rgba(128,90,213,0.6);
-    --chart-rain-bg: rgba(128,90,213,0.08);
-    --chart-wind: #38a169;
-    --chart-wind-light: #68d391;
-    --chart-fill: rgba(49,130,206,0.08);
-    --chart-wind-fill: rgba(56,161,105,0.08);
-    --chart-grid: rgba(226,232,240,0.8);
-    --tooltip-bg: #ffffff;
-    --tooltip-border: #e2e8f0;
-    --tooltip-text: #1a1a2e;
-  }
-  [data-theme="dark"] {
-    --bg-primary: #1a1a2e;
-    --bg-secondary: rgba(255,255,255,0.05);
-    --bg-tertiary: rgba(255,255,255,0.03);
-    --text-primary: #e8e8e8;
-    --text-secondary: #a0aec0;
-    --text-muted: #718096;
-    --border-color: rgba(255,255,255,0.1);
-    --border-light: rgba(255,255,255,0.05);
-    --shadow: 0 2px 8px rgba(0,0,0,0.3);
-    --card-bg: rgba(255,255,255,0.05);
-    --accent: #4facfe;
-    --accent-light: rgba(79,172,254,0.1);
-    --green: #4ade80;
-    --red: #f87171;
-    --orange: #fb923c;
-    --purple: #a78bfa;
-    --chart-temp: #4facfe;
-    --chart-feels: #fb923c;
-    --chart-rain: #a78bfa;
-    --chart-rain-light: rgba(167,139,250,0.7);
-    --chart-rain-bg: rgba(167,139,250,0.15);
-    --chart-wind: #4ade80;
-    --chart-wind-light: #6ee7b7;
-    --chart-fill: rgba(79,172,254,0.06);
-    --chart-wind-fill: rgba(74,222,128,0.06);
-    --chart-grid: rgba(255,255,255,0.08);
-    --tooltip-bg: #2d3748;
-    --tooltip-border: rgba(255,255,255,0.1);
-    --tooltip-text: #e8e8e8;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: var(--bg-primary); color: var(--text-primary);
-    min-height: 100vh; padding: 20px; transition: background 0.3s, color 0.3s;
-  }
-  .container { max-width: 1400px; margin: 0 auto; }
-  header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; }
-  .header-left { flex: 1; min-width: 200px; }
-  .station-name { font-size: 0.75rem; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; }
-  h1 { font-size: 1.8rem; font-weight: 700; color: var(--accent); line-height: 1.2; }
-  .header-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-  .live-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(56,161,105,0.1); border: 1px solid rgba(56,161,105,0.3); color: var(--green); font-size: 0.7rem; font-weight: 600; letter-spacing: 1px; padding: 4px 10px; border-radius: 20px; }
-  .live-dot { width: 6px; height: 6px; background: var(--green); border-radius: 50%; animation: pulse 2s infinite; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
-  .theme-toggle { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 20px; cursor: pointer; font-size: 0.8rem; color: var(--text-secondary); transition: all 0.2s; }
-  .theme-toggle:hover { background: var(--accent-light); }
-  #last-updated { color: var(--text-muted); font-size: 0.75rem; margin-top: 4px; }
-  .tab-bar { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 2px solid var(--border-color); padding-bottom: 0; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; -ms-overflow-style: none; }
-  .tab-bar::-webkit-scrollbar { display: none; }
-  .tab { padding: 10px 20px; background: none; border: none; border-bottom: 3px solid transparent; margin-bottom: -2px; color: var(--text-muted); font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
-  .tab:hover { color: var(--accent); }
-  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-  .section-label { font-size: 0.95rem; font-weight: 600; color: var(--text-primary); margin: 24px 0 12px; }
-  .section-label:first-child { margin-top: 0; }
-  .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 15px; }
-  .card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; box-shadow: var(--shadow); animation: fadeUp 0.4s ease both; transition: background 0.3s, border-color 0.3s, box-shadow 0.3s; }
-  @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-  .card-label { font-size: 0.7rem; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
-  .card-value { font-size: 1.5rem; font-weight: 700; line-height: 1; color: var(--text-primary); }
-  .card-value span { font-size: 0.75rem; color: var(--text-muted); font-weight: 400; }
-  .card-sub { font-size: 0.75rem; color: var(--text-muted); margin-top: 6px; line-height: 1.6; }
-  .rain-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; }
-  .rain-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; box-shadow: var(--shadow); animation: fadeUp 0.4s ease both; transition: background 0.3s, border-color 0.3s, box-shadow 0.3s; }
-  .records-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
-  .record-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; box-shadow: var(--shadow); animation: fadeUp 0.4s ease both; transition: background 0.3s, border-color 0.3s, box-shadow 0.3s; }
-  .record-value { font-size: 1.4rem; font-weight: 700; color: var(--text-primary); line-height: 1; margin-top: 8px; }
-  .record-value span { font-size: 0.75rem; color: var(--text-muted); }
-  .record-date { font-size: 0.75rem; color: var(--text-muted); margin-top: 5px; }
-  .charts-grid { display: grid; gap: 16px; }
-  .chart-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; box-shadow: var(--shadow); animation: fadeUp 0.4s ease both; transition: background 0.3s, border-color 0.3s, box-shadow 0.3s; }
-  .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 8px; }
-  .chart-title { font-size: 0.85rem; font-weight: 600; color: var(--text-primary); }
-  .chart-legend { display: flex; gap: 16px; flex-wrap: wrap; }
-  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.75rem; color: var(--text-muted); }
-  .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
-  .chart-wrap { position: relative; height: 220px; }
-  .time-controls { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
-  .time-btn { background: var(--card-bg); border: 1px solid var(--border-color); color: var(--text-muted); font-size: 0.75rem; font-weight: 600; padding: 8px 14px; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
-  .time-btn:hover { border-color: var(--accent); color: var(--accent); }
-  .time-btn.active { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
-  .explorer-form { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; box-shadow: var(--shadow); margin-bottom: 16px; }
-  .form-group { display: flex; flex-direction: column; gap: 4px; }
-  .form-group label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); }
-  .form-group input[type="date"] { padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-primary); color: var(--text-primary); font-size: 0.85rem; }
-  .form-group input[type="date"]:focus { outline: none; border-color: var(--accent); }
-  .search-btn { padding: 8px 20px; background: var(--accent); color: #fff; border: none; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
-  .search-btn:hover { opacity: 0.9; }
-  .quick-picks { display: flex; gap: 6px; flex-wrap: wrap; }
-  .quick-pick { padding: 6px 12px; background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.7rem; color: var(--text-secondary); cursor: pointer; transition: all 0.2s; }
-  .quick-pick:hover { border-color: var(--accent); color: var(--accent); }
-  .monthly-table-wrap { overflow-x: auto; margin-top: 16px; }
-  .monthly-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-  .monthly-table th { text-align: left; padding: 10px 12px; border-bottom: 2px solid var(--border-color); color: var(--text-muted); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; }
-  .monthly-table td { padding: 10px 12px; border-bottom: 1px solid var(--border-light); color: var(--text-primary); }
-  .monthly-table tr:hover td { background: var(--accent-light); }
-  .loading { text-align: center; padding: 60px 20px; color: var(--text-muted); font-size: 0.85rem; }
-  .loading::after { content: ''; display: block; width: 28px; height: 28px; border: 2px solid var(--border-color); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 14px auto 0; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .error { background: rgba(229,62,62,0.1); border: 1px solid rgba(229,62,62,0.3); border-radius: 8px; padding: 14px; color: var(--red); font-size: 0.85rem; margin-bottom: 16px; }
-  footer { text-align: center; margin-top: 36px; color: var(--text-muted); font-size: 0.75rem; }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Recipe Box</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --cream: #faf7f2;
+      --warm-white: #fff9f2;
+      --brown: #3d2b1f;
+      --brown-light: #7a5c4a;
+      --accent: #c8622a;
+      --accent-light: #f0ddd4;
+      --sage: #7a8c6e;
+      --border: #e8ddd4;
+      --shadow: 0 2px 12px rgba(61,43,31,0.08);
+      --radius: 14px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--brown); min-height: 100vh; }
 
-  /* Hero section */
-  .hero { display: flex; align-items: center; gap: 24px; padding: 24px; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 16px; box-shadow: var(--shadow); margin-bottom: 16px; flex-wrap: wrap; transition: background 0.3s; }
-  .hero-temp { font-size: 4rem; font-weight: 800; line-height: 1; }
-  .hero-temp span { font-size: 1.5rem; font-weight: 400; vertical-align: top; }
-  .hero-details { flex: 1; min-width: 150px; }
-  .hero-condition { font-size: 1.1rem; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
-  .hero-sub { font-size: 0.8rem; color: var(--text-muted); line-height: 1.6; }
-  .hero-range { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 0.8rem; }
-  .hero-range-bar { flex: 1; height: 6px; background: var(--border-color); border-radius: 3px; position: relative; max-width: 120px; }
-  .hero-range-fill { position: absolute; height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--accent), var(--orange)); }
-  .temp-cold { color: #3182ce; }
-  .temp-mild { color: #38a169; }
-  .temp-warm { color: #dd6b20; }
-  .temp-hot { color: #e53e3e; }
+    header { background: var(--brown); color: var(--cream); padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 12px rgba(0,0,0,0.2); }
+    header h1 { font-family: 'Playfair Display', serif; font-size: 1.4rem; letter-spacing: 0.02em; white-space: nowrap; }
+    header h1 span { color: #e8a87c; }
+    nav { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+    nav button { background: transparent; border: 1.5px solid rgba(255,255,255,0.3); color: var(--cream); padding: 6px 12px; border-radius: 20px; font-family: 'DM Sans', sans-serif; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+    nav button.active, nav button:hover { background: var(--accent); border-color: var(--accent); }
 
-  /* Highlight cards */
-  .highlights { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 16px; }
-  @media (max-width: 768px) { .highlights { grid-template-columns: repeat(2, 1fr); } }
-  .hl-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; box-shadow: var(--shadow); text-align: center; transition: background 0.3s; }
-  .hl-card .card-label { margin-bottom: 12px; }
-  .hl-icon { margin-bottom: 8px; }
-  .hl-value { font-size: 1.8rem; font-weight: 700; color: var(--text-primary); line-height: 1; }
-  .hl-value span { font-size: 0.75rem; color: var(--text-muted); font-weight: 400; }
-  .hl-sub { font-size: 0.75rem; color: var(--text-muted); margin-top: 6px; }
+    main { max-width: 680px; margin: 0 auto; padding: 20px 16px 80px; }
 
-  /* Compass */
-  .compass { width: 80px; height: 80px; position: relative; margin: 0 auto 8px; }
-  .compass-ring { width: 100%; height: 100%; border: 2px solid var(--border-color); border-radius: 50%; position: relative; }
-  .compass-dirs { position: absolute; inset: 0; font-size: 9px; color: var(--text-muted); font-weight: 600; }
-  .compass-dirs span { position: absolute; }
-  .compass-dirs .c-n { top: 2px; left: 50%; transform: translateX(-50%); }
-  .compass-dirs .c-s { bottom: 2px; left: 50%; transform: translateX(-50%); }
-  .compass-dirs .c-e { right: 4px; top: 50%; transform: translateY(-50%); }
-  .compass-dirs .c-w { left: 4px; top: 50%; transform: translateY(-50%); }
-  .compass-arrow { position: absolute; top: 50%; left: 50%; width: 0; height: 0; transform-origin: 0px 0px; transform: rotate(0deg); transition: transform 0.8s ease-in-out; }
-  .compass-arrow::before { content: ''; position: absolute; top: -28px; left: -5px; width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 28px solid var(--accent); }
-  .compass-arrow::after { content: ''; position: absolute; top: 0; left: -3px; width: 6px; height: 16px; background: var(--text-muted); border-radius: 0 0 3px 3px; opacity: 0.4; }
-  .compass-dot { position: absolute; top: 50%; left: 50%; width: 8px; height: 8px; background: var(--text-primary); border-radius: 50%; transform: translate(-50%, -50%); z-index: 2; }
-  @keyframes windSway { 0%,100%{transform:rotate(var(--wind-deg))} 25%{transform:rotate(calc(var(--wind-deg) + 3deg))} 75%{transform:rotate(calc(var(--wind-deg) - 3deg))} }
-  .compass-arrow.sway { animation: windSway 4s ease-in-out infinite; }
+    .view { display: none; }
+    .view.active { display: block; }
 
-  /* SVG gauges */
-  .gauge-svg { display: block; margin: 0 auto; }
+    .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+    .section-header h2 { font-family: 'Playfair Display', serif; font-size: 1.4rem; }
+    .btn-primary { background: var(--accent); color: white; border: none; padding: 10px 18px; border-radius: 24px; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; font-weight: 500; cursor: pointer; transition: background 0.2s, transform 0.1s; }
+    .btn-primary:hover { background: #b05520; }
+    .btn-primary:active { transform: scale(0.97); }
+    .btn-secondary { background: transparent; color: var(--brown-light); border: 1.5px solid var(--border); padding: 9px 16px; border-radius: 24px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; }
+    .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-danger { background: transparent; color: #c0392b; border: 1.5px solid #e8c4c4; padding: 9px 16px; border-radius: 24px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; cursor: pointer; }
+    .btn-danger:hover { background: #fdf0f0; }
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--brown-light); }
+    .empty-state .icon { font-size: 3rem; margin-bottom: 12px; }
+    .empty-state p { font-size: 0.95rem; line-height: 1.6; }
+    .loading { text-align: center; padding: 40px; color: var(--brown-light); font-size: 0.9rem; }
+    .back-btn { display: flex; align-items: center; gap: 6px; background: none; border: none; color: var(--brown-light); font-family: 'DM Sans', sans-serif; font-size: 0.9rem; cursor: pointer; margin-bottom: 20px; padding: 0; }
+    .back-btn:hover { color: var(--accent); }
 
-  /* Indoor house */
-  .indoor-house { display: flex; gap: 15px; margin-bottom: 16px; }
-  .indoor-floor { flex: 1; background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; box-shadow: var(--shadow); text-align: center; transition: background 0.3s; }
-  .indoor-floor .floor-icon { font-size: 1.5rem; margin-bottom: 4px; }
-  .indoor-floor .floor-temp { font-size: 1.4rem; font-weight: 700; color: var(--text-primary); }
-  .indoor-floor .floor-temp span { font-size: 0.75rem; color: var(--text-muted); font-weight: 400; }
-  .indoor-floor .floor-sub { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; }
-  .info-tip {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 16px; height: 16px; background: var(--accent); color: #fff;
-    border-radius: 50%; font-size: 10px; font-weight: 700; cursor: help;
-    margin-left: 6px; position: relative; vertical-align: middle;
-    flex-shrink: 0;
-  }
-  .info-tip:hover .tip-text, .info-tip:focus .tip-text { display: block; }
-  .tip-text {
-    display: none; position: absolute; top: calc(100% + 8px); left: 0;
-    width: 260px; max-width: 80vw; padding: 12px;
-    background: #1e293b; color: #f8fafc; border-radius: 8px;
-    font-size: 0.8rem; font-weight: 400; line-height: 1.5;
-    z-index: 1000; box-shadow: 0 4px 20px rgba(0,0,0,0.4); text-align: left;
-  }
-  .tip-text::before {
-    content: ''; position: absolute; bottom: 100%; left: 12px;
-    border: 6px solid transparent;
-    border-bottom-color: #1e293b;
-  }
-</style>
+    /* Category tabs */
+    .category-tabs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 20px; scrollbar-width: none; }
+    .category-tabs::-webkit-scrollbar { display: none; }
+    .cat-tab { background: white; border: 1.5px solid var(--border); color: var(--brown-light); padding: 6px 16px; border-radius: 20px; font-family: 'DM Sans', sans-serif; font-size: 0.82rem; cursor: pointer; white-space: nowrap; transition: all 0.2s; flex-shrink: 0; }
+    .cat-tab.active { background: var(--accent); border-color: var(--accent); color: white; }
+
+    /* Recipe cards */
+    .recipe-grid { display: flex; flex-direction: column; gap: 10px; }
+    .recipe-card { background: white; border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow); cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; border: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .recipe-card:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(61,43,31,0.12); }
+    .recipe-card-info h3 { font-family: 'Playfair Display', serif; font-size: 1.05rem; margin-bottom: 4px; }
+    .recipe-card-meta { font-size: 0.78rem; color: var(--brown-light); display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .recipe-card-arrow { color: var(--accent); font-size: 1.2rem; flex-shrink: 0; }
+    .cat-badge { background: var(--accent-light); color: var(--accent); padding: 2px 8px; border-radius: 10px; font-size: 0.72rem; }
+
+    /* Recipe detail */
+    .recipe-detail-header { margin-bottom: 20px; }
+    .recipe-detail-header h2 { font-family: 'Playfair Display', serif; font-size: 1.7rem; margin-bottom: 6px; }
+    .recipe-detail-header p { color: var(--brown-light); font-size: 0.95rem; }
+    .servings-scaler { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+    .servings-scaler label { font-size: 0.82rem; color: var(--brown-light); }
+    .servings-scaler input { width: 60px; padding: 6px 10px; border: 1.5px solid var(--border); border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.9rem; text-align: center; outline: none; }
+    .servings-scaler input:focus { border-color: var(--accent); }
+    .nutrition-bar { background: var(--accent-light); border-radius: var(--radius); padding: 14px 16px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 20px; border: 1px solid #e8c4b0; }
+    .nutrition-item { text-align: center; }
+    .nutrition-item .value { font-family: 'Playfair Display', serif; font-size: 1.2rem; color: var(--accent); font-weight: 600; }
+    .nutrition-item .label { font-size: 0.68rem; color: var(--brown-light); text-transform: uppercase; letter-spacing: 0.05em; }
+    .section-title { font-family: 'Playfair Display', serif; font-size: 1.05rem; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+    .ingredient-list { list-style: none; margin-bottom: 20px; }
+    .ingredient-item { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+    .ingredient-item:last-child { border-bottom: none; }
+    .ingredient-item label { display: flex; align-items: center; gap: 10px; cursor: pointer; flex: 1; }
+    .ingredient-item input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
+    .ingredient-amount { color: var(--brown-light); font-size: 0.82rem; white-space: nowrap; }
+    .directions-text { background: white; border-radius: var(--radius); padding: 16px 18px; font-size: 0.92rem; line-height: 1.7; border: 1px solid var(--border); white-space: pre-wrap; margin-bottom: 20px; }
+    .detail-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    /* Form */
+    .form-card { background: white; border-radius: var(--radius); padding: 20px 18px; box-shadow: var(--shadow); border: 1px solid var(--border); margin-bottom: 14px; }
+    .form-card h3 { font-family: 'Playfair Display', serif; font-size: 1.05rem; margin-bottom: 14px; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; font-size: 0.78rem; font-weight: 500; color: var(--brown-light); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px; }
+    .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 9px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.92rem; color: var(--brown); background: var(--warm-white); transition: border-color 0.2s; outline: none; }
+    .form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color: var(--accent); }
+    .form-group textarea { min-height: 80px; resize: vertical; }
+    .form-actions { display: flex; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
+
+    /* Ingredient builder */
+    .ingredient-builder { margin-bottom: 14px; }
+    .ingredient-row { display: grid; grid-template-columns: 2fr 0.7fr 1.1fr auto; gap: 6px; margin-bottom: 4px; align-items: center; }
+    .ingredient-row input, .ingredient-row select { padding: 8px 9px; border: 1.5px solid var(--border); border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; background: var(--warm-white); outline: none; color: var(--brown); width: 100%; }
+    .ingredient-row input:focus, .ingredient-row select:focus { border-color: var(--accent); }
+    .remove-ingredient { background: none; border: none; color: #ccc; font-size: 1.2rem; cursor: pointer; padding: 4px; transition: color 0.2s; flex-shrink: 0; }
+    .remove-ingredient:hover { color: #e05555; }
+    .nutrition-panel { background: var(--accent-light); border-radius: 8px; padding: 10px 12px; font-size: 0.82rem; color: var(--brown-light); margin-bottom: 10px; display: none; border: 1px solid #e8c4b0; }
+    .nutrition-panel.visible { display: block; }
+    .usda-result { margin-bottom: 6px; }
+    .apply-btn { background: var(--accent); color: white; border: none; padding: 4px 10px; border-radius: 12px; font-size: 0.78rem; cursor: pointer; margin-left: 6px; }
+    .manual-nutrition-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 6px; }
+    .manual-nutrition-grid label { font-size: 0.7rem; color: var(--brown-light); text-transform: uppercase; letter-spacing: 0.04em; display: block; margin-bottom: 2px; }
+    .manual-nutrition-grid input { width: 100%; padding: 6px 7px; border: 1.5px solid var(--border); border-radius: 6px; font-family: 'DM Sans', sans-serif; font-size: 0.82rem; background: white; outline: none; color: var(--brown); }
+    .manual-nutrition-grid input:focus { border-color: var(--accent); }
+    .nutrition-toggle { font-size: 0.76rem; color: var(--accent); cursor: pointer; text-decoration: underline; background: none; border: none; padding: 0; font-family: 'DM Sans', sans-serif; }
+    .add-ingredient-btn { background: none; border: 1.5px dashed var(--border); color: var(--brown-light); width: 100%; padding: 9px; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem; cursor: pointer; transition: all 0.2s; }
+    .add-ingredient-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Shopping */
+    .store-selector { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 16px; scrollbar-width: none; }
+    .store-selector::-webkit-scrollbar { display: none; }
+    .store-btn { background: white; border: 1.5px solid var(--border); color: var(--brown-light); padding: 6px 16px; border-radius: 20px; font-family: 'DM Sans', sans-serif; font-size: 0.82rem; cursor: pointer; white-space: nowrap; transition: all 0.2s; flex-shrink: 0; }
+    .store-btn.active { background: var(--brown); border-color: var(--brown); color: white; }
+    .shopping-section-header { font-size: 0.75rem; color: var(--brown-light); text-transform: uppercase; letter-spacing: 0.06em; padding: 14px 0 6px; border-bottom: 1px solid var(--border); margin-bottom: 6px; font-weight: 500; }
+    .shopping-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: white; border-radius: 10px; margin-bottom: 6px; border: 1px solid var(--border); transition: opacity 0.2s; }
+    .shopping-item.checked { opacity: 0.45; }
+    .shopping-item input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+    .shopping-item-name { flex: 1; font-size: 0.92rem; }
+    .shopping-item.checked .shopping-item-name { text-decoration: line-through; }
+    .shopping-item-amount { font-size: 0.8rem; color: var(--brown-light); white-space: nowrap; }
+    .remove-item-btn { background: none; border: none; color: #ccc; cursor: pointer; font-size: 1rem; padding: 4px; transition: color 0.2s; flex-shrink: 0; }
+    .remove-item-btn:hover { color: #e05555; }
+    .section-tag { font-size: 0.7rem; color: var(--sage); background: #f0f4ed; border: 1px solid #d4e0ce; padding: 2px 8px; border-radius: 10px; white-space: nowrap; cursor: pointer; flex-shrink: 0; transition: all 0.2s; }
+    .section-tag:hover { background: #e2eed9; border-color: var(--sage); }
+    .section-tag.unassigned { color: #bbb; background: #f5f5f5; border-color: #e0e0e0; }
+    .section-picker { position: fixed; background: white; border-radius: var(--radius); box-shadow: 0 8px 32px rgba(0,0,0,0.15); border: 1px solid var(--border); z-index: 300; min-width: 180px; overflow: hidden; }
+    .section-picker-header { padding: 10px 14px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--brown-light); border-bottom: 1px solid var(--border); font-weight: 500; }
+    .section-picker-option { padding: 10px 14px; font-size: 0.9rem; cursor: pointer; transition: background 0.15s; border-bottom: 1px solid var(--border); }
+    .section-picker-option:last-child { border-bottom: none; }
+    .section-picker-option:hover { background: var(--accent-light); }
+    .section-picker-option.active { color: var(--accent); font-weight: 500; }
+    .shopping-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+    .shopping-tab { background: white; border: 1.5px solid var(--border); color: var(--brown-light); padding: 6px 18px; border-radius: 20px; font-family: 'DM Sans', sans-serif; font-size: 0.82rem; cursor: pointer; transition: all 0.2s; }
+    .shopping-tab.active { background: var(--brown); border-color: var(--brown); color: white; }
+    .staple-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: white; border-radius: 10px; margin-bottom: 6px; border: 1px solid var(--border); }
+    .staple-item-name { flex: 1; font-size: 0.92rem; }
+    .staple-amount { font-size: 0.8rem; color: var(--brown-light); white-space: nowrap; }
+    .add-staple-btn { background: var(--sage); color: white; border: none; width: 28px; height: 28px; border-radius: 50%; font-size: 1.1rem; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }
+    .add-staple-btn:hover { background: #5e7054; }
+    .delete-staple-btn { background: none; border: none; color: #ccc; font-size: 1rem; cursor: pointer; padding: 4px; flex-shrink: 0; }
+    .delete-staple-btn:hover { color: #e05555; }
+    .add-manual-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .add-manual-row input { flex: 1; min-width: 100px; padding: 9px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.88rem; background: white; outline: none; color: var(--brown); }
+    .add-manual-row input:focus { border-color: var(--accent); }
+
+    /* Bulk import */
+    .bulk-textarea { width: 100%; min-height: 160px; padding: 12px; border: 1.5px solid var(--border); border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.92rem; color: var(--brown); background: var(--warm-white); resize: vertical; outline: none; }
+    .bulk-textarea:focus { border-color: var(--accent); }
+
+    /* Toast */
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--brown); color: var(--cream); padding: 11px 20px; border-radius: 24px; font-size: 0.88rem; box-shadow: 0 4px 16px rgba(0,0,0,0.2); transition: transform 0.3s ease; z-index: 999; white-space: nowrap; }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    @media (max-width: 420px) {
+      .nutrition-bar { grid-template-columns: repeat(2, 1fr); }
+      .manual-nutrition-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
 </head>
 <body>
-<div class="container">
-  <header>
-    <div class="header-left">
-      <div class="station-name">The Bird Feeder — Eugene, OR</div>
-      <h1>Weather Dashboard</h1>
-      <div id="last-updated">Loading...</div>
+
+<header>
+  <h1>Recipe <span>Box</span></h1>
+  <nav>
+    <button class="active" onclick="showView('recipes')">Recipes</button>
+    <button onclick="showView('shopping')">Shopping</button>
+    <button onclick="window.location.href='planner.html'">Planner</button>
+    <button onclick="window.location.href='settings.html'">Settings</button>
+  </nav>
+</header>
+
+<main>
+
+  <!-- RECIPES -->
+  <div id="view-recipes" class="view active">
+    <div class="section-header">
+      <h2>My Recipes</h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn-secondary" onclick="showView('bulk-import')">Bulk Import</button>
+        <button class="btn-primary" onclick="startAddRecipe()">+ Add Recipe</button>
+      </div>
     </div>
-    <div class="header-right">
-      <span class="live-badge"><span class="live-dot"></span>LIVE</span>
-      <button class="theme-toggle" onclick="toggleTheme()"><span id="theme-icon">☀️</span> <span id="theme-label">Light</span></button>
-    </div>
-  </header>
-  <div class="tab-bar">
-    <button class="tab active" data-tab="live" onclick="switchTab('live')">Live</button>
-    <button class="tab" data-tab="explorer" onclick="switchTab('explorer')">Explorer</button>
-    <button class="tab" data-tab="monthly" onclick="switchTab('monthly')">Monthly</button>
-    <button class="tab" data-tab="records" onclick="switchTab('records')">Records</button>
+    <div class="category-tabs" id="recipe-category-tabs"></div>
+    <div id="recipe-list" class="recipe-grid"><div class="loading">Loading…</div></div>
   </div>
-  <div id="error-box"></div>
-  <div id="tab-content"><div class="loading">Loading weather data...</div></div>
-  <footer>Eugene, OR &bull; Powered by Ambient Weather Network</footer>
-</div>
+
+  <!-- RECIPE DETAIL -->
+  <div id="view-detail" class="view">
+    <button class="back-btn" onclick="showView('recipes')">← Back to Recipes</button>
+    <div id="detail-content"></div>
+  </div>
+
+  <!-- ADD / EDIT RECIPE -->
+  <div id="view-add-recipe" class="view">
+    <div class="section-header">
+      <h2 id="recipe-form-title">New Recipe</h2>
+    </div>
+    <div class="form-card">
+      <h3>Basic Info</h3>
+      <div class="form-group">
+        <label>Recipe Name</label>
+        <input type="text" id="recipe-name" placeholder="e.g. Chicken Tikka Masala"/>
+      </div>
+      <div class="form-group">
+        <label>Description (optional)</label>
+        <input type="text" id="recipe-desc" placeholder="A quick one-line description"/>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="form-group">
+          <label>Servings</label>
+          <input type="number" id="recipe-servings" value="4" min="1"/>
+        </div>
+        <div class="form-group">
+          <label>Category</label>
+          <select id="recipe-category"><option value="">No category</option></select>
+        </div>
+      </div>
+    </div>
+    <div class="form-card">
+      <h3>Ingredients</h3>
+      <div class="ingredient-builder" id="ingredient-builder"></div>
+      <button class="add-ingredient-btn" onclick="addIngredientRow()">+ Add Ingredient</button>
+    </div>
+    <div class="form-card">
+      <h3>Directions</h3>
+      <div class="form-group">
+        <textarea id="recipe-directions" placeholder="Write your step-by-step directions here…" style="min-height:140px"></textarea>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" onclick="saveRecipe()">Save Recipe</button>
+      <button class="btn-secondary" onclick="cancelRecipeForm()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- BULK IMPORT -->
+  <div id="view-bulk-import" class="view">
+    <button class="back-btn" onclick="showView('recipes')">← Back to Recipes</button>
+    <div class="section-header"><h2>Bulk Import Recipes</h2></div>
+    <div class="form-card">
+      <h3>Paste Recipe Names</h3>
+      <p style="font-size:0.85rem;color:var(--brown-light);margin-bottom:12px">One recipe name per line. Each will be created as an empty recipe you can fill in later.</p>
+      <textarea class="bulk-textarea" id="bulk-names" placeholder="Chicken Tikka Masala&#10;Beef Stew&#10;Banana Bread"></textarea>
+      <div class="form-group" style="margin-top:12px">
+        <label>Category (optional — applies to all)</label>
+        <select id="bulk-category"><option value="">No category</option></select>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-primary" onclick="runBulkImport()">Import Recipes</button>
+      <button class="btn-secondary" onclick="showView('recipes')">Cancel</button>
+    </div>
+  </div>
+
+  <!-- SHOPPING LIST -->
+  <div id="view-shopping" class="view">
+    <div class="section-header">
+      <h2>Shopping List</h2>
+      <button class="btn-secondary" id="clear-checked-btn" onclick="clearChecked()">Clear Checked</button>
+    </div>
+    <div class="store-selector" id="store-selector"></div>
+    <div class="shopping-tabs">
+      <button class="shopping-tab active" id="tab-list" onclick="switchShoppingTab('list')">My List</button>
+      <button class="shopping-tab" id="tab-staples" onclick="switchShoppingTab('staples')">Staples</button>
+    </div>
+    <!-- MY LIST tab -->
+    <div id="shopping-tab-list">
+      <div id="shopping-content"><div class="loading">Loading…</div></div>
+      <div class="form-card" style="margin-top:16px">
+        <h3>Add Item Manually</h3>
+        <div class="add-manual-row">
+          <input type="text" id="manual-item" placeholder="Item name" onkeydown="if(event.key==='Enter') addManualItem()"/>
+          <input type="text" id="manual-amount" placeholder="Amount" style="max-width:90px" onkeydown="if(event.key==='Enter') addManualItem()"/>
+          <button class="btn-primary" onclick="addManualItem()">Add</button>
+        </div>
+      </div>
+    </div>
+    <!-- STAPLES tab -->
+    <div id="shopping-tab-staples" style="display:none">
+      <div id="staples-content"><div class="loading">Loading…</div></div>
+      <div class="form-card" style="margin-top:16px">
+        <h3>Add Staple Item</h3>
+        <div class="add-manual-row">
+          <input type="text" id="staple-name" placeholder="Item name" onkeydown="if(event.key==='Enter') addStaple()"/>
+          <input type="text" id="staple-amount" placeholder="Amount" style="max-width:90px" onkeydown="if(event.key==='Enter') addStaple()"/>
+          <button class="btn-primary" onclick="addStaple()">Save</button>
+        </div>
+      </div>
+      <div style="margin-top:12px">
+        <button class="btn-primary" onclick="addAllStaplesToList()" style="width:100%">Add All Staples to Shopping List 🛒</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section picker popup -->
+  <div class="section-picker" id="section-picker" style="display:none">
+    <div class="section-picker-header">Assign to section</div>
+    <div id="section-picker-options"></div>
+  </div>
+
+</main>
+<div class="toast" id="toast"></div>
+
 <script>
-  // THEME
-  function toggleTheme() {
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
-    localStorage.setItem('theme', isDark ? 'light' : 'dark');
-    updateThemeButton();
-    if (activeTab === 'live' && liveCache.rows) renderLiveCharts(liveCache.rows);
-    if (activeTab === 'explorer' && explorerCache.rows) renderExplorerChart(explorerCache.rows);
-    if (activeTab === 'monthly' && monthlyCache.data) renderMonthlyCharts(monthlyCache.data);
-  }
-  function updateThemeButton() {
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    document.getElementById('theme-icon').textContent = isDark ? '🌙' : '☀️';
-    document.getElementById('theme-label').textContent = isDark ? 'Dark' : 'Light';
-  }
-  document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'light');
-  document.addEventListener('DOMContentLoaded', updateThemeButton);
+  const SUPABASE_URL = 'https://xlzrwyrunjzjbcyfnvem.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhsenJ3eXJ1bmp6amJjeWZudmVtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2MzA0OTUsImV4cCI6MjA5MjIwNjQ5NX0.9I6UHX0BDLy89h-5Vwl1aHLZBLdttTFIR3FsG6S1Qo4';
+  const USDA_KEY = 'FGNOKgn42It2abTeG4ldA2W14CgYwSoO4lIk0qqX';
 
-  // CONFIG & STATE
-  const SUPABASE_URL = 'https://qafjqqnwnxzeluikjhoz.supabase.co';
-  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhZmpxcW53bnh6ZWx1aWtqaG96Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwMzY1ODMsImV4cCI6MjA5MTYxMjU4M30.zdqSoeNxSH316m12PcbhNjRoJuWJz6s_klJLvuDuBdE';
-  const H = { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` };
-  let activeTab = 'live', currentRange = 1, charts = {};
-  let liveCache = {}, explorerCache = {}, monthlyCache = {}, recordsCache = {};
+  const headers = {
+    'apikey': SUPABASE_KEY,
+    'Authorization': `Bearer ${SUPABASE_KEY}`,
+    'Content-Type': 'application/json',
+    'Prefer': 'return=representation'
+  };
 
-  // HELPERS
-  function getChartDefaults() {
-    const s = getComputedStyle(document.documentElement);
-    return { responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
-      plugins:{legend:{display:false},tooltip:{backgroundColor:s.getPropertyValue('--tooltip-bg').trim(),borderColor:s.getPropertyValue('--tooltip-border').trim(),borderWidth:1,titleColor:s.getPropertyValue('--text-muted').trim(),bodyColor:s.getPropertyValue('--tooltip-text').trim(),titleFont:{size:10},bodyFont:{size:12},padding:10}},
-      scales:{x:{grid:{color:s.getPropertyValue('--chart-grid').trim()},ticks:{color:s.getPropertyValue('--text-muted').trim(),font:{size:9},maxTicksLimit:8}},y:{grid:{color:s.getPropertyValue('--chart-grid').trim()},ticks:{color:s.getPropertyValue('--text-muted').trim(),font:{size:9}}}}
-    };
+  async function dbGet(table, params = '') {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, { headers });
+    return res.json();
   }
-  function windDir(deg){if(deg==null)return'--';const d=['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];return d[Math.round(deg/22.5)%16];}
-  function formatTime(ts,rangeDays){const d=new Date(ts);if(rangeDays<=1)return d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});if(rangeDays<=7)return d.toLocaleDateString([],{month:'short',day:'numeric'})+' '+d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});if(rangeDays<=60)return d.toLocaleDateString([],{month:'short',day:'numeric'})+' '+d.toLocaleTimeString([],{hour:'numeric'});return d.toLocaleDateString([],{month:'short',day:'numeric'});}
-  function fmt(val,dec=1){return val!=null?Number(val).toFixed(dec):'--';}
-  function formatDate(ts){return new Date(ts).toLocaleDateString([],{month:'short',day:'numeric',year:'numeric'});}
-  function destroyCharts(){Object.values(charts).forEach(c=>c.destroy());charts={};}
-
-  function computeRangeStats(rows) {
-    const valid=(arr,key)=>arr.filter(r=>r[key]!=null);
-    const temps=valid(rows,'temp_outdoor'),winds=valid(rows,'wind_speed'),gusts=valid(rows,'wind_gust'),rains=valid(rows,'rain_hourly');
-    let hotRow=null,coldRow=null;
-    for(const r of temps){if(!hotRow||r.temp_outdoor>hotRow.temp_outdoor)hotRow=r;if(!coldRow||r.temp_outdoor<coldRow.temp_outdoor)coldRow=r;}
-    let gustRow=null;for(const r of gusts){if(!gustRow||r.wind_gust>gustRow.wind_gust)gustRow=r;}
-    let rainRow=null;for(const r of valid(rows,'rain_daily')){if(!rainRow||r.rain_daily>rainRow.rain_daily)rainRow=r;}
-    const avgTemp=temps.length?temps.reduce((s,r)=>s+r.temp_outdoor,0)/temps.length:null;
-    const avgWind=winds.length?winds.reduce((s,r)=>s+r.wind_speed,0)/winds.length:null;
-    const humids=valid(rows,'humidity_outdoor');
-    const avgHumidity=humids.length?humids.reduce((s,r)=>s+r.humidity_outdoor,0)/humids.length:null;
-    const dailyMaxRain={};for(const r of valid(rows,'rain_daily')){const day=r.recorded_at.substring(0,10);if(!dailyMaxRain[day]||r.rain_daily>dailyMaxRain[day])dailyMaxRain[day]=r.rain_daily;}
-    const totalRain=Object.values(dailyMaxRain).reduce((s,v)=>s+v,0);
-    let maxRainRate=0,maxRainRateRow=null;for(const r of rains){if(r.rain_hourly>maxRainRate){maxRainRate=r.rain_hourly;maxRainRateRow=r;}}
-    // Indoor stats (track full rows for dates)
-    const indoorTemps = valid(rows,'temp_indoor');
-    const avgIndoor = indoorTemps.length ? indoorTemps.reduce((s,r)=>s+r.temp_indoor,0)/indoorTemps.length : null;
-    let indoorHighRow = null, indoorLowRow = null;
-    for (const r of indoorTemps) { if (!indoorHighRow||r.temp_indoor>indoorHighRow.temp_indoor) indoorHighRow=r; if (!indoorLowRow||r.temp_indoor<indoorLowRow.temp_indoor) indoorLowRow=r; }
-    const sensor2Temps = valid(rows,'temp_sensor2');
-    const avgSensor2 = sensor2Temps.length ? sensor2Temps.reduce((s,r)=>s+r.temp_sensor2,0)/sensor2Temps.length : null;
-    let sensor2HighRow = null, sensor2LowRow = null;
-    for (const r of sensor2Temps) { if (!sensor2HighRow||r.temp_sensor2>sensor2HighRow.temp_sensor2) sensor2HighRow=r; if (!sensor2LowRow||r.temp_sensor2<sensor2LowRow.temp_sensor2) sensor2LowRow=r; }
-    return{hot:hotRow,cold:coldRow,gustRow,rainRow,maxRainRateRow,avgTemp,avgWind,avgHumidity,totalRain,maxRainRate,avgIndoor,indoorHighRow,indoorLowRow,avgSensor2,sensor2HighRow,sensor2LowRow};
+  async function dbPost(table, body) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, { method: 'POST', headers, body: JSON.stringify(body) });
+    return res.json();
+  }
+  async function dbPatch(table, id, body) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, { method: 'PATCH', headers, body: JSON.stringify(body) });
+    return res.json();
+  }
+  async function dbDelete(table, id) {
+    await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, { method: 'DELETE', headers });
   }
 
-  async function fetchRows(since,until){
-    let rows=[],offset=0;
-    let url=`${SUPABASE_URL}/rest/v1/weather_data?recorded_at=gte.${since}&order=recorded_at.asc&limit=1000`;
-    if(until)url+=`&recorded_at=lte.${until}`;
-    while(true){const res=await fetch(url+`&offset=${offset}`,{headers:H});if(!res.ok)throw new Error(`HTTP ${res.status}`);const page=await res.json();rows=rows.concat(page);if(page.length<1000)break;offset+=1000;}
-    return rows;
-  }
-  // Thin rows for charts — keep every Nth point to max ~500 points
-  function thinForChart(rows, maxPoints=500) {
-    if (rows.length <= maxPoints) return rows;
-    const step = Math.ceil(rows.length / maxPoints);
-    const thinned = [];
-    for (let i = 0; i < rows.length; i += step) thinned.push(rows[i]);
-    // Always include the last point
-    if (thinned[thinned.length-1] !== rows[rows.length-1]) thinned.push(rows[rows.length-1]);
-    return thinned;
-  }
-  async function fetchRecords(){
-    const base=`${SUPABASE_URL}/rest/v1/weather_data`;
-    const[hotR,coldR,rainR,gustR]=await Promise.all([
-      fetch(`${base}?select=temp_outdoor,recorded_at&temp_outdoor=not.is.null&order=temp_outdoor.desc.nullslast&limit=1`,{headers:H}),
-      fetch(`${base}?select=temp_outdoor,recorded_at&temp_outdoor=not.is.null&order=temp_outdoor.asc.nullslast&limit=1`,{headers:H}),
-      fetch(`${base}?select=rain_daily,recorded_at&rain_daily=not.is.null&order=rain_daily.desc.nullslast&limit=1`,{headers:H}),
-      fetch(`${base}?select=wind_gust,recorded_at&wind_gust=not.is.null&order=wind_gust.desc.nullslast&limit=1`,{headers:H})]);
-    const[hot,cold,rain,gust]=await Promise.all([hotR.json(),coldR.json(),rainR.json(),gustR.json()]);
-    return{hot:hot[0],cold:cold[0],rain:rain[0],gust:gust[0]};
-  }
-  async function fetchYTD(){
-    const base=`${SUPABASE_URL}/rest/v1/weather_data`,year=new Date().getFullYear(),cm=new Date().getMonth();let ytd=0;const fetches=[];
-    for(let m=0;m<cm;m++){const s=new Date(year,m,1).toISOString(),e=new Date(year,m+1,1).toISOString();fetches.push(fetch(`${base}?select=rain_monthly&rain_monthly=not.is.null&recorded_at=gte.${s}&recorded_at=lt.${e}&order=recorded_at.desc&limit=1`,{headers:H}).then(r=>r.json()));}
-    fetches.push(fetch(`${base}?select=rain_monthly&rain_monthly=not.is.null&recorded_at=gte.${new Date(year,cm,1).toISOString()}&order=recorded_at.desc&limit=1`,{headers:H}).then(r=>r.json()));
-    const results=await Promise.all(fetches);for(const res of results){if(res[0]?.rain_monthly!=null)ytd+=res[0].rain_monthly;}
-    return ytd>0?ytd.toFixed(2):'--';
+  let allCategories = [];
+  let allStores = [];
+  let allSections = [];
+  let currentCategoryFilter = null;
+  let currentStoreId = null;
+  let editingRecipeId = null;
+  let ingredientRows = [];
+  const usdaCache = {};
+  let lookupTimers = {};
+
+  function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2800);
   }
 
-  // EUGENE CLIMATE DATA
-  async function fetchEugeneToday() {
-    // NWS API for real-time Eugene Airport data (no token, no lag)
-    let nwsToday = null;
-    try {
-      const todayStart = new Date(); todayStart.setHours(0,0,0,0);
-      const nwsRes = await fetch(`https://api.weather.gov/stations/KEUG/observations?start=${todayStart.toISOString()}&limit=200`,
-        {headers:{'User-Agent':'WeatherDashboard/1.0'}});
-      const nwsData = await nwsRes.json();
-      const obs = nwsData.features || [];
-      const temps = obs.map(f => f.properties?.temperature?.value).filter(v => v != null).map(c => c*9/5+32);
-      if (temps.length) {
-        nwsToday = { high: Math.round(Math.max(...temps)*10)/10, low: Math.round(Math.min(...temps)*10)/10, observations: temps.length };
-      }
-      // Also get yesterday
-      const yestStart = new Date(todayStart - 86400000);
-      const nwsYest = await fetch(`https://api.weather.gov/stations/KEUG/observations?start=${yestStart.toISOString()}&end=${todayStart.toISOString()}&limit=200`,
-        {headers:{'User-Agent':'WeatherDashboard/1.0'}});
-      const yestData = await nwsYest.json();
-      const yTemps = (yestData.features || []).map(f => f.properties?.temperature?.value).filter(v => v != null).map(c => c*9/5+32);
-      if (yTemps.length) {
-        nwsToday.yesterdayHigh = Math.round(Math.max(...yTemps)*10)/10;
-        nwsToday.yesterdayLow = Math.round(Math.min(...yTemps)*10)/10;
-      }
-    } catch(e) { console.warn('NWS fetch failed:', e); }
-
-    // Get today's normals from Supabase (NOAA historical)
-    const mm = String(new Date().getMonth()+1).padStart(2,'0');
-    const dd = String(new Date().getDate()).padStart(2,'0');
-    let todayNormal = null;
-    const years = [];
-    for (let y = 2020; y <= new Date().getFullYear(); y++) years.push(`date.eq.${y}-${mm}-${dd}`);
-    try {
-      const normRes = await fetch(`${SUPABASE_URL}/rest/v1/eugene_climate?or=(${years.join(',')})&limit=1`, {headers:H});
-      const normData = await normRes.json();
-      todayNormal = normData[0] || null;
-    } catch(e) {}
-
-    // Fallback to NOAA historical if NWS fails
-    let noaaLatest = null;
-    if (!nwsToday) {
-      try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/eugene_climate?order=date.desc&limit=1`, {headers:H});
-        const data = await res.json();
-        noaaLatest = data[0] || null;
-      } catch(e) {}
-    }
-
-    return { nwsToday, todayNormal, noaaLatest };
+  function showViewRaw(name) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById(`view-${name}`)?.classList.add('active');
+    window.scrollTo(0, 0);
   }
-  async function fetchEugeneMonthly(year) {
-    const monthNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/eugene_climate?date=gte.${year}-01-01&date=lte.${year}-12-31&order=date.asc`, {headers:H});
-    const rows = await res.json();
-    // Group by month
-    const byMonth = {};
-    for (const r of rows) {
-      const m = parseInt(r.date.substring(5,7)) - 1;
-      if (!byMonth[m]) byMonth[m] = {rain:0, temps:[], highs:[], lows:[], normals_high:[], normals_low:[]};
-      if (r.prcp != null) byMonth[m].rain += r.prcp;
-      if (r.tmax != null) { byMonth[m].temps.push((r.tmax+r.tmin)/2); byMonth[m].highs.push(r.tmax); byMonth[m].lows.push(r.tmin); }
-      if (r.normal_tmax != null) byMonth[m].normals_high.push(r.normal_tmax);
-      if (r.normal_tmin != null) byMonth[m].normals_low.push(r.normal_tmin);
-    }
-    return Object.keys(byMonth).map(m => {
-      const d = byMonth[m];
-      const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null;
-      return { month: monthNames[m], rain: d.rain, avgTemp: avg(d.temps), high: d.highs.length ? Math.max(...d.highs) : null, low: d.lows.length ? Math.min(...d.lows) : null, normalHigh: avg(d.normals_high), normalLow: avg(d.normals_low) };
+
+  function showView(name) {
+    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+    showViewRaw(name);
+    if (name === 'recipes') { document.querySelector('nav button:nth-child(1)').classList.add('active'); loadRecipes(); }
+    if (name === 'shopping') { document.querySelector('nav button:nth-child(2)').classList.add('active'); loadShopping(); }
+    if (name === 'bulk-import') initBulkImport();
+  }
+
+  // ── CATEGORIES ───────────────────────────────────────────
+  async function loadCategories() {
+    allCategories = await dbGet('categories', 'order=name');
+  }
+
+  function populateCategorySelect(selectId) {
+    const sel = document.getElementById(selectId);
+    if (!sel) return;
+    const current = sel.value;
+    sel.innerHTML = '<option value="">No category</option>';
+    allCategories.forEach(c => {
+      const o = document.createElement('option');
+      o.value = c.id; o.textContent = c.name;
+      sel.appendChild(o);
     });
-  }
-  async function fetchEugeneThisDay() {
-    // Get all data for today's month-day across available years
-    const now = new Date();
-    const mm = String(now.getMonth()+1).padStart(2,'0');
-    const dd = String(now.getDate()).padStart(2,'0');
-    // Build OR query for each year we might have data
-    const years = [];
-    for (let y = 2020; y <= now.getFullYear(); y++) years.push(`date.eq.${y}-${mm}-${dd}`);
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/eugene_climate?or=(${years.join(',')})&order=date.desc`, {headers:H});
-    return await res.json();
+    if (current) sel.value = current;
   }
 
-  // VISUAL HELPERS
-  function getTempColor(t) { if(t==null)return''; if(t<40)return'temp-cold'; if(t<65)return'temp-mild'; if(t<85)return'temp-warm'; return'temp-hot'; }
-  function getUVColor(uv) { if(uv<=2)return'#38a169'; if(uv<=5)return'#d69e2e'; if(uv<=7)return'#dd6b20'; if(uv<=10)return'#e53e3e'; return'#805ad5'; }
-  function getPressureTrend(rows) {
-    const recent = rows.filter(r=>r.pressure_relative!=null).slice(-36); // last 3 hours
-    if(recent.length<2) return '→';
-    const first = recent[0].pressure_relative, last = recent[recent.length-1].pressure_relative;
-    const diff = last - first;
-    if(diff > 0.03) return '↑'; if(diff < -0.03) return '↓'; return '→';
-  }
-  async function fetchNWSConditions() {
-    try {
-      const res = await fetch('https://api.weather.gov/stations/KEUG/observations/latest',{headers:{'User-Agent':'BirdFeatherWeather/1.0'}});
-      const d = (await res.json()).properties;
-      return { condition: d.textDescription || '', icon: d.icon ? d.icon.replace('medium','large') : '' };
-    } catch(e) { return { condition: '', icon: '' }; }
-  }
-  async function fetchSunriseSunset() {
-    try {
-      const res = await fetch('https://api.sunrise-sunset.org/json?lat=44.1331&lng=-123.2156&formatted=0&date=today');
-      const d = (await res.json()).results;
-      const rise = new Date(d.sunrise).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
-      const set = new Date(d.sunset).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
-      const hrs = Math.floor(d.day_length/3600), mins = Math.round((d.day_length%3600)/60);
-      return { sunrise: rise, sunset: set, dayLength: `${hrs}h ${mins}m` };
-    } catch(e) { return null; }
-  }
-  function makeHumidityRing(pct) {
-    const r=28, circ=2*Math.PI*r, offset=circ*(1-pct/100);
-    return `<svg class="gauge-svg" width="70" height="70" viewBox="0 0 70 70"><circle cx="35" cy="35" r="${r}" fill="none" stroke="var(--border-color)" stroke-width="5"/><circle cx="35" cy="35" r="${r}" fill="none" stroke="var(--accent)" stroke-width="5" stroke-dasharray="${circ}" stroke-dashoffset="${offset}" stroke-linecap="round" transform="rotate(-90 35 35)"/></svg>`;
-  }
-  function makeUVGauge(uv) {
-    const maxUV=12, angle=Math.min(uv/maxUV,1)*180, color=getUVColor(uv);
-    return `<svg class="gauge-svg" width="90" height="55" viewBox="0 0 90 55"><path d="M10,50 A35,35 0 0,1 80,50" fill="none" stroke="var(--border-color)" stroke-width="6" stroke-linecap="round"/><path d="M10,50 A35,35 0 0,1 80,50" fill="none" stroke="${color}" stroke-width="6" stroke-linecap="round" stroke-dasharray="${angle*Math.PI*35/180} 999"/></svg>`;
-  }
+  // ── RECIPES ──────────────────────────────────────────────
+  async function loadRecipes() {
+    await loadCategories();
+    renderCategoryTabs();
+    populateCategorySelect('recipe-category');
+    populateCategorySelect('bulk-category');
 
-  // TAB SYSTEM
-  function switchTab(name){
-    activeTab=name;
-    document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===name));
-    destroyCharts();
-    if(name==='live')loadLiveTab();
-    else if(name==='explorer')renderExplorerTab();
-    else if(name==='monthly')loadMonthlyTab();
-    else if(name==='records')loadRecordsTab();
-  }
+    const list = document.getElementById('recipe-list');
+    list.innerHTML = '<div class="loading">Loading…</div>';
+    let params = 'order=name';
+    if (currentCategoryFilter) params += `&category_id=eq.${currentCategoryFilter}`;
+    const recipes = await dbGet('recipes', params);
 
-  // LIVE TAB
-  async function loadLiveTab(){
-    const tc=document.getElementById('tab-content');
-    tc.innerHTML='<div class="loading">Loading weather data...</div>';
-    try{
-      let since;
-      if (currentRange === 'today') {
-        // Midnight local time
-        const now = new Date();
-        since = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-      } else {
-        since = new Date(Date.now() - currentRange * 86400000).toISOString();
-      }
-      const[rows,allRec,ytd,eugeneData,nwsCond,sunData]=await Promise.all([fetchRows(since),fetchRecords(),fetchYTD(),fetchEugeneToday(),fetchNWSConditions(),fetchSunriseSunset()]);
-      if(!rows.length)throw new Error('No data found.');
-      const latest=rows[rows.length-1];
-      document.getElementById('last-updated').textContent=`Last updated: ${new Date(latest.recorded_at).toLocaleString()}`;
-      liveCache={rows,latest,allRec,ytd,stats:computeRangeStats(rows),eugeneData,nwsCond,sunData};
-      renderLiveTab();
-    }catch(err){document.getElementById('error-box').innerHTML=`<div class="error">${err.message}</div>`;tc.innerHTML='';}
-  }
-  function renderLiveTab(){
-    const{rows,latest,allRec,ytd,stats,eugeneData,nwsCond,sunData}=liveCache;
-    const nws = eugeneData?.nwsToday;
-    const todayNormal = eugeneData?.todayNormal;
-    const noaaFallback = eugeneData?.noaaLatest;
-    const rl=currentRange==='today'?'Today':currentRange===1?'24 Hours':currentRange===7?'7 Days':currentRange===30?'30 Days':'12 Months';
-    const temp = latest.temp_outdoor;
-    const pressTrend = getPressureTrend(rows);
-    const windDeg = latest.wind_direction ?? 0;
-    const condition = nwsCond?.condition || '';
-    const uv = latest.uv_index ?? 0;
-
-    document.getElementById('tab-content').innerHTML=`
-      <div class="time-controls">
-        <button class="time-btn ${currentRange==='today'?'active':''}" onclick="setRange('today')">Today</button>
-        <button class="time-btn ${currentRange===1?'active':''}" onclick="setRange(1)">24H</button>
-        <button class="time-btn ${currentRange===7?'active':''}" onclick="setRange(7)">7D</button>
-        <button class="time-btn ${currentRange===30?'active':''}" onclick="setRange(30)">30D</button>
-        <button class="time-btn ${currentRange===365?'active':''}" onclick="setRange(365)">1Y</button>
-      </div>
-
-      <div class="section-label">Current Conditions <span class="info-tip">?<span class="tip-text">Live readings from your personal weather station, updated every 5 minutes. Weather condition and icon from the National Weather Service (Eugene Airport).</span></span></div>
-      <div class="hero">
-        <div>
-          <div class="hero-temp ${getTempColor(temp)}">${fmt(temp,0)}<span>°F</span></div>
-          <div class="hero-condition">${(()=>{
-            const c = (condition||'').toLowerCase();
-            if(c.includes('thunder'))return'⛈️';if(c.includes('rain')||c.includes('shower')||c.includes('drizzle'))return'🌧️';if(c.includes('snow'))return'🌨️';if(c.includes('fog')||c.includes('mist')||c.includes('haze'))return'🌫️';if(c.includes('overcast'))return'☁️';if(c.includes('mostly cloudy'))return'🌥️';if(c.includes('partly'))return'⛅';if(c.includes('cloud'))return'☁️';if(c.includes('clear')||c.includes('sunny')||c.includes('fair'))return'☀️';return'🌤️';
-          })()} ${condition || ''}</div>
-        </div>
-        <div class="hero-details">
-          <div class="hero-sub">Feels like ${fmt(latest.feels_like,1)}°F &bull; Dew point ${fmt(latest.dew_point,1)}°F</div>
-          ${stats.hot && stats.cold ? `<div class="hero-range">
-            <span>${fmt(stats.cold.temp_outdoor,0)}°</span>
-            <div class="hero-range-bar"><div class="hero-range-fill" style="left:0;width:${Math.round((temp-(stats.cold?.temp_outdoor||0))/((stats.hot?.temp_outdoor||100)-(stats.cold?.temp_outdoor||0))*100)}%"></div></div>
-            <span>${fmt(stats.hot.temp_outdoor,0)}°</span>
-          </div>` : ''}
-          ${sunData ? `<div class="hero-sub" style="margin-top:4px">☀ ${sunData.sunrise} &nbsp; ☽ ${sunData.sunset} &nbsp; ${sunData.dayLength}</div>` : ''}
-        </div>
-        ${nwsCond?.icon ? `<div style="flex-shrink:0"><img src="${nwsCond.icon}" alt="${condition}" style="width:80px;height:80px;border-radius:12px" onerror="this.style.display='none'"></div>` : ''}
-        ${nws || todayNormal ? `<div style="text-align:right">
-          <div class="hero-sub" style="font-weight:600">Eugene Airport</div>
-          ${nws ? `<div class="hero-sub">High: ${fmt(nws.high,0)}°F &bull; Low: ${fmt(nws.low,0)}°F</div>` : ''}
-          ${todayNormal ? `<div class="hero-sub">Normal: ${fmt(todayNormal.normal_tmax,0)}° / ${fmt(todayNormal.normal_tmin,0)}°F</div>` : ''}
-        </div>` : ''}
-      </div>
-
-      <div class="highlights">
-        <div class="hl-card">
-          <div class="card-label">Wind</div>
-          <div class="compass"><div class="compass-ring"><div class="compass-dirs"><span class="c-n">N</span><span class="c-s">S</span><span class="c-e">E</span><span class="c-w">W</span></div><div class="compass-arrow sway" style="--wind-deg:${windDeg}deg"></div><div class="compass-dot"></div></div></div>
-          <div class="hl-value">${fmt(latest.wind_speed,1)} <span>mph</span></div>
-          <div class="hl-sub">Gust: ${fmt(latest.wind_gust,1)} mph &bull; ${windDir(latest.wind_direction)}</div>
-        </div>
-        <div class="hl-card">
-          <div class="card-label">Humidity</div>
-          <div class="hl-icon">${makeHumidityRing(latest.humidity_outdoor??0)}</div>
-          <div class="hl-value">${latest.humidity_outdoor??'--'}<span>%</span></div>
-          <div class="hl-sub">Dew point: ${fmt(latest.dew_point,1)}°F</div>
-        </div>
-        <div class="hl-card">
-          <div class="card-label">UV Index</div>
-          <div class="hl-icon">${makeUVGauge(uv)}</div>
-          <div class="hl-value" style="color:${getUVColor(uv)}">${uv}</div>
-          <div class="hl-sub">${uv<=2?'Low':uv<=5?'Moderate':uv<=7?'High':uv<=10?'Very High':'Extreme'}</div>
-        </div>
-        <div class="hl-card">
-          <div class="card-label">Pressure</div>
-          <div class="hl-icon" style="font-size:2rem;color:var(--text-muted)">${pressTrend==='↑'?'⬆':''}${pressTrend==='↓'?'⬇':''}${pressTrend==='→'?'➡':''}</div>
-          <div class="hl-value">${fmt(latest.pressure_relative,2)} <span>in</span></div>
-          <div class="hl-sub">${pressTrend==='↑'?'Rising':pressTrend==='↓'?'Falling':'Steady'} &bull; Solar: ${fmt(latest.solar_radiation,0)} W/m²</div>
-        </div>
-        <div class="hl-card">
-          <div class="card-label">Rain Today</div>
-          <div class="hl-icon" style="font-size:2rem">${latest.rain_daily>0?'🌧':'💧'}</div>
-          <div class="hl-value">${fmt(latest.rain_daily,2)} <span>in</span></div>
-          <div class="hl-sub">Rate: ${fmt(latest.rain_hourly,2)} in/hr</div>
-        </div>
-        <div class="hl-card">
-          <div class="card-label">Indoor</div>
-          <div style="display:flex;gap:12px;justify-content:center;margin:8px 0">
-            <div><div class="hl-sub">Upstairs</div><div style="font-size:1.2rem;font-weight:700;color:var(--text-primary)">${fmt(latest.temp_indoor,0)}°</div><div class="hl-sub">${latest.humidity_indoor??'--'}%</div></div>
-            <div style="width:1px;background:var(--border-color)"></div>
-            <div><div class="hl-sub">Downstairs</div><div style="font-size:1.2rem;font-weight:700;color:var(--text-primary)">${fmt(latest.temp_sensor2,0)}°</div><div class="hl-sub">${latest.humidity_sensor2??'--'}%</div></div>
+    if (!recipes.length) {
+      list.innerHTML = `<div class="empty-state"><div class="icon">🍳</div><p>No recipes yet.<br>Add your first one!</p></div>`;
+      return;
+    }
+    list.innerHTML = recipes.map(r => {
+      const cat = allCategories.find(c => c.id === r.category_id);
+      return `<div class="recipe-card" onclick="loadRecipeDetail('${r.id}')">
+        <div class="recipe-card-info">
+          <h3>${r.name}</h3>
+          <div class="recipe-card-meta">
+            <span>🍽 ${r.servings} serving${r.servings !== 1 ? 's' : ''}</span>
+            ${cat ? `<span class="cat-badge">${cat.name}</span>` : ''}
+            ${r.description ? `<span>${r.description}</span>` : ''}
           </div>
         </div>
-      </div>
-
-      <div class="section-label">${rl} Summary <span class="info-tip">?<span class="tip-text">${currentRange==='today'?"Shows today's weather from midnight to now — temperature, rain, and wind for the current calendar day.":"High, low, and average conditions computed from your station's data over the selected time period."}</span></span></div>
-      <div class="cards-grid">
-        <div class="card"><div class="card-label">High Temp</div><div class="card-value">${fmt(stats.hot?.temp_outdoor,1)}<span>°F</span></div><div class="card-sub">${stats.hot?formatDate(stats.hot.recorded_at):'--'}</div></div>
-        <div class="card"><div class="card-label">Low Temp</div><div class="card-value">${fmt(stats.cold?.temp_outdoor,1)}<span>°F</span></div><div class="card-sub">${stats.cold?formatDate(stats.cold.recorded_at):'--'}</div></div>
-        <div class="card"><div class="card-label">Avg Temp</div><div class="card-value">${fmt(stats.avgTemp,1)}<span>°F</span></div><div class="card-sub">Avg humidity: ${fmt(stats.avgHumidity,0)}%</div></div>
-        <div class="card"><div class="card-label">Total Rain</div><div class="card-value">${fmt(stats.totalRain,2)}<span>in</span></div><div class="card-sub">Avg wind: ${fmt(stats.avgWind,1)} mph</div></div>
-        <div class="card"><div class="card-label">Rainiest Day</div><div class="card-value">${fmt(stats.rainRow?.rain_daily,2)}<span>in</span></div><div class="card-sub">${stats.rainRow?formatDate(stats.rainRow.recorded_at):'--'}</div></div>
-        <div class="card"><div class="card-label">Max Rain Rate</div><div class="card-value">${fmt(stats.maxRainRate,2)}<span>in/hr</span></div><div class="card-sub">${stats.maxRainRateRow?formatDate(stats.maxRainRateRow.recorded_at):'--'}</div></div>
-        <div class="card"><div class="card-label">Max Gust</div><div class="card-value">${fmt(stats.gustRow?.wind_gust,1)}<span>mph</span></div><div class="card-sub">${stats.gustRow?formatDate(stats.gustRow.recorded_at):'--'}</div></div>
-      </div>
-      <div class="section-label">Charts — Last ${rl}</div>
-      <div class="charts-grid">
-        <div class="chart-card"><div class="chart-header"><div class="chart-title">Temperature</div><div class="chart-legend"><div class="legend-item"><div class="legend-dot" style="background:var(--chart-temp)"></div>Actual</div><div class="legend-item"><div class="legend-dot" style="background:var(--chart-feels)"></div>Feels Like</div></div></div><div class="chart-wrap"><canvas id="tempChart"></canvas></div></div>
-        <div class="chart-card"><div class="chart-header"><div class="chart-title">Rainfall</div><div class="chart-legend"><div class="legend-item"><div class="legend-dot" style="background:var(--chart-rain)"></div>Hourly</div><div class="legend-item"><div class="legend-dot" style="background:var(--chart-rain)"></div>Daily</div></div></div><div class="chart-wrap"><canvas id="rainChart"></canvas></div></div>
-        <div class="chart-card"><div class="chart-header"><div class="chart-title">Wind</div><div class="chart-legend"><div class="legend-item"><div class="legend-dot" style="background:var(--chart-wind)"></div>Speed</div><div class="legend-item"><div class="legend-dot" style="background:var(--chart-wind-light)"></div>Gust</div></div></div><div class="chart-wrap"><canvas id="windChart"></canvas></div></div>
+        <span class="recipe-card-arrow">›</span>
       </div>`;
-    renderLiveCharts(rows);
+    }).join('');
   }
-  function renderLiveCharts(rows){
-    destroyCharts();const chartRange=currentRange==='today'?1:currentRange;const chartRows=thinForChart(rows);const labels=chartRows.map(r=>formatTime(r.recorded_at,chartRange));
-    const s=getComputedStyle(document.documentElement),d=getChartDefaults();
-    charts.temp=new Chart(document.getElementById('tempChart'),{type:'line',data:{labels,datasets:[{label:'Temp',data:chartRows.map(r=>r.temp_outdoor),borderColor:s.getPropertyValue('--chart-temp').trim(),backgroundColor:s.getPropertyValue('--chart-fill').trim(),borderWidth:2,pointRadius:0,tension:0.4,fill:true},{label:'Feels',data:chartRows.map(r=>r.feels_like),borderColor:s.getPropertyValue('--chart-feels').trim(),borderWidth:1.5,pointRadius:0,tension:0.4,borderDash:[4,3],fill:false}]},options:{...d,scales:{...d.scales,y:{...d.scales.y,ticks:{...d.scales.y.ticks,callback:v=>v+'°F'}}}}});
-    charts.rain=new Chart(document.getElementById('rainChart'),{type:'bar',data:{labels,datasets:[{label:'Hourly',data:chartRows.map(r=>r.rain_hourly),backgroundColor:s.getPropertyValue('--chart-rain-light').trim(),borderRadius:2},{label:'Daily',data:chartRows.map(r=>r.rain_daily),backgroundColor:s.getPropertyValue('--chart-rain-bg').trim(),borderColor:s.getPropertyValue('--chart-rain').trim(),borderWidth:1,type:'line',pointRadius:0,tension:0.4,fill:false}]},options:{...d,scales:{...d.scales,y:{...d.scales.y,ticks:{...d.scales.y.ticks,callback:v=>v+'"'}}}}});
-    charts.wind=new Chart(document.getElementById('windChart'),{type:'line',data:{labels,datasets:[{label:'Speed',data:chartRows.map(r=>r.wind_speed),borderColor:s.getPropertyValue('--chart-wind').trim(),backgroundColor:s.getPropertyValue('--chart-wind-fill').trim(),borderWidth:2,pointRadius:0,tension:0.4,fill:true},{label:'Gust',data:chartRows.map(r=>r.wind_gust),borderColor:s.getPropertyValue('--chart-wind-light').trim(),borderWidth:1.5,pointRadius:0,tension:0.4,borderDash:[4,3],fill:false}]},options:{...d,scales:{...d.scales,y:{...d.scales.y,ticks:{...d.scales.y.ticks,callback:v=>v+' mph'}}}}});
-  }
-  function setRange(range){currentRange=range;loadLiveTab();}
 
-  // EXPLORER TAB
-  function renderExplorerTab(){
-    const today=new Date().toISOString().split('T')[0];
-    const weekAgo=new Date(Date.now()-7*86400000).toISOString().split('T')[0];
-    document.getElementById('tab-content').innerHTML=`
-      <div class="section-label">Date Range Explorer <span class="info-tip">?<span class="tip-text">Pick any date range to see stats, temperature, and rainfall from your station — compared against Eugene's 30-year climate normals. Use quick-pick buttons or enter custom dates.</span></span></div>
-      <div class="explorer-form">
-        <div class="form-group"><label>Start Date</label><input type="date" id="start-date" value="${weekAgo}"></div>
-        <div class="form-group"><label>End Date</label><input type="date" id="end-date" value="${today}"></div>
-        <button class="search-btn" onclick="runExplorer()">Search</button>
-        <div class="quick-picks">
-          <button class="quick-pick" onclick="quickPick('yesterday')">Yesterday</button>
-          <button class="quick-pick" onclick="quickPick('7d')">Last 7 Days</button>
-          <button class="quick-pick" onclick="quickPick('30d')">Last 30 Days</button>
-          <button class="quick-pick" onclick="quickPick('thisMonth')">This Month</button>
-          <button class="quick-pick" onclick="quickPick('lastMonth')">Last Month</button>
+  function renderCategoryTabs() {
+    const tabs = document.getElementById('recipe-category-tabs');
+    let html = `<button class="cat-tab ${!currentCategoryFilter ? 'active' : ''}" onclick="filterByCategory(null)">All Recipes</button>`;
+    allCategories.forEach(c => {
+      html += `<button class="cat-tab ${currentCategoryFilter === c.id ? 'active' : ''}" onclick="filterByCategory('${c.id}')">${c.name}</button>`;
+    });
+    tabs.innerHTML = html;
+  }
+
+  function filterByCategory(id) {
+    currentCategoryFilter = id;
+    loadRecipes();
+  }
+
+  // ── RECIPE DETAIL ────────────────────────────────────────
+  async function loadRecipeDetail(id, scaledServings = null) {
+    showViewRaw('detail');
+    const el = document.getElementById('detail-content');
+    el.innerHTML = '<div class="loading">Loading…</div>';
+
+    const [recipes, ingredients] = await Promise.all([
+      dbGet('recipes', `id=eq.${id}`),
+      dbGet('ingredients', `recipe_id=eq.${id}&order=name`)
+    ]);
+    const r = recipes[0];
+    const baseServings = r.servings;
+    const displayServings = scaledServings || baseServings;
+    const scale = displayServings / baseServings;
+
+    const totalCals = ingredients.reduce((s, i) => s + (i.calories || 0), 0);
+    const totalProtein = ingredients.reduce((s, i) => s + (i.protein_g || 0), 0);
+    const totalCarbs = ingredients.reduce((s, i) => s + (i.carbs_g || 0), 0);
+    const totalFat = ingredients.reduce((s, i) => s + (i.fat_g || 0), 0);
+
+    el.innerHTML = `
+      <div class="recipe-detail-header">
+        <h2>${r.name}</h2>
+        ${r.description ? `<p>${r.description}</p>` : ''}
+        <div class="servings-scaler">
+          <label>Servings:</label>
+          <input type="number" min="1" value="${displayServings}" onchange="loadRecipeDetail('${id}', parseInt(this.value)||${baseServings})"/>
+          ${scale !== 1 ? `<span style="font-size:0.78rem;color:var(--accent)">scaled ${scale.toFixed(2)}×</span>` : ''}
         </div>
       </div>
-      <div id="explorer-results"></div>`;
-    if(explorerCache.rows)renderExplorerResults();
-  }
-  function quickPick(preset){
-    const now=new Date(),y=now.getFullYear(),m=now.getMonth();let start,end;
-    if(preset==='yesterday'){const yd=new Date(now-86400000);start=end=yd.toISOString().split('T')[0];}
-    else if(preset==='7d'){start=new Date(now-7*86400000).toISOString().split('T')[0];end=now.toISOString().split('T')[0];}
-    else if(preset==='30d'){start=new Date(now-30*86400000).toISOString().split('T')[0];end=now.toISOString().split('T')[0];}
-    else if(preset==='thisMonth'){start=new Date(y,m,1).toISOString().split('T')[0];end=now.toISOString().split('T')[0];}
-    else if(preset==='lastMonth'){start=new Date(y,m-1,1).toISOString().split('T')[0];end=new Date(y,m,0).toISOString().split('T')[0];}
-    document.getElementById('start-date').value=start;
-    document.getElementById('end-date').value=end;
-    runExplorer();
-  }
-  async function runExplorer(){
-    const startVal=document.getElementById('start-date').value,endVal=document.getElementById('end-date').value;
-    if(!startVal||!endVal)return;
-    document.getElementById('explorer-results').innerHTML='<div class="loading">Searching...</div>';
-    try{
-      const startLocal = new Date(startVal + 'T00:00:00');
-      const endLocal = new Date(endVal + 'T23:59:59');
-      // Fetch station data and Eugene normals in parallel
-      // Also fetch prior year normals as fallback (normals are the same year-to-year)
-      const prevYearStart = (parseInt(startVal) - 1) + startVal.substring(4);
-      const prevYearEnd = (parseInt(endVal) - 1) + endVal.substring(4);
-      const [rows, normals2026, normals2025] = await Promise.all([
-        fetchRows(startLocal.toISOString(),endLocal.toISOString()),
-        fetch(`${SUPABASE_URL}/rest/v1/eugene_climate?select=date,normal_tmax,normal_tmin,prcp&date=gte.${startVal}&date=lte.${endVal}&order=date.asc`,{headers:H}).then(r=>r.json()).catch(()=>[]),
-        fetch(`${SUPABASE_URL}/rest/v1/eugene_climate?select=date,normal_tmax,normal_tmin,prcp&date=gte.${prevYearStart}&date=lte.${prevYearEnd}&order=date.asc`,{headers:H}).then(r=>r.json()).catch(()=>[])
-      ]);
-      if(!rows.length){document.getElementById('explorer-results').innerHTML='<div class="error">No data found for this range.</div>';return;}
-      // Merge normals: build lookup by MM-DD, prefer current year, fallback to prior year
-      const normalsByMMDD = {};
-      for (const n of normals2025) { const mmdd = n.date.substring(5); normalsByMMDD[mmdd] = n; }
-      for (const n of normals2026) { const mmdd = n.date.substring(5); normalsByMMDD[mmdd] = n; } // overwrite with current year
-      // Rebuild normals array mapped to the queried date range
-      const normals = [];
-      const d = new Date(startVal + 'T00:00:00');
-      const endD = new Date(endVal + 'T00:00:00');
-      while (d <= endD) {
-        const mmdd = (d.getMonth()+1).toString().padStart(2,'0') + '-' + d.getDate().toString().padStart(2,'0');
-        const dateStr = d.toISOString().substring(0,10);
-        if (normalsByMMDD[mmdd]) normals.push({...normalsByMMDD[mmdd], date: dateStr});
-        d.setDate(d.getDate() + 1);
-      }
-      explorerCache={rows,startVal,endVal,normals};renderExplorerResults();
-    }catch(err){document.getElementById('explorer-results').innerHTML=`<div class="error">${err.message}</div>`;}
-  }
-  function renderExplorerResults(){
-    const{rows,startVal,endVal}=explorerCache;const stats=computeRangeStats(rows);
-    const days=Math.max(1,Math.round((new Date(endVal)-new Date(startVal))/86400000)+1);
-    // Format using local dates (append T00:00:00 to prevent UTC interpretation)
-    const fmtLocal = d => new Date(d+'T00:00:00').toLocaleDateString([],{month:'short',day:'numeric',year:'numeric'});
-    const label=startVal===endVal?fmtLocal(startVal):`${fmtLocal(startVal)} — ${fmtLocal(endVal)} (${days} days)`;
-    document.getElementById('explorer-results').innerHTML=`
-      <div class="section-label">${label}</div>
-      <div class="cards-grid">
-        <div class="card"><div class="card-label">High Temp</div><div class="card-value">${fmt(stats.hot?.temp_outdoor,1)}<span>°F</span></div><div class="card-sub">${stats.hot?formatDate(stats.hot.recorded_at):'--'}</div></div>
-        <div class="card"><div class="card-label">Low Temp</div><div class="card-value">${fmt(stats.cold?.temp_outdoor,1)}<span>°F</span></div><div class="card-sub">${stats.cold?formatDate(stats.cold.recorded_at):'--'}</div></div>
-        <div class="card"><div class="card-label">Avg Temp</div><div class="card-value">${fmt(stats.avgTemp,1)}<span>°F</span></div><div class="card-sub">Avg humidity: ${fmt(stats.avgHumidity,0)}%</div></div>
-        <div class="card"><div class="card-label">Total Rain</div><div class="card-value">${fmt(stats.totalRain,2)}<span>in</span></div><div class="card-sub">Avg wind: ${fmt(stats.avgWind,1)} mph</div></div>
-        <div class="card"><div class="card-label">Rainiest Day</div><div class="card-value">${fmt(stats.rainRow?.rain_daily,2)}<span>in</span></div><div class="card-sub">${stats.rainRow?formatDate(stats.rainRow.recorded_at):'--'}</div></div>
-        <div class="card"><div class="card-label">Max Rain Rate</div><div class="card-value">${fmt(stats.maxRainRate,2)}<span>in/hr</span></div><div class="card-sub">${stats.maxRainRateRow?formatDate(stats.maxRainRateRow.recorded_at):'--'}</div></div>
-        <div class="card"><div class="card-label">Max Gust</div><div class="card-value">${fmt(stats.gustRow?.wind_gust,1)}<span>mph</span></div><div class="card-sub">${stats.gustRow?formatDate(stats.gustRow.recorded_at):'--'}</div></div>
+      <div class="nutrition-bar">
+        <div class="nutrition-item"><div class="value">${Math.round(totalCals * scale / displayServings)}</div><div class="label">Cal/serving</div></div>
+        <div class="nutrition-item"><div class="value">${(totalProtein * scale / displayServings).toFixed(1)}g</div><div class="label">Protein</div></div>
+        <div class="nutrition-item"><div class="value">${(totalCarbs * scale / displayServings).toFixed(1)}g</div><div class="label">Carbs</div></div>
+        <div class="nutrition-item"><div class="value">${(totalFat * scale / displayServings).toFixed(1)}g</div><div class="label">Fat</div></div>
       </div>
-      ${stats.avgIndoor!=null||stats.avgSensor2!=null?`<div class="section-label">Indoor</div>
-      <div class="cards-grid">
-        ${stats.avgIndoor!=null?`
-          <div class="card"><div class="card-label">Upstairs Avg</div><div class="card-value">${fmt(stats.avgIndoor,1)}<span>°F</span></div></div>
-          <div class="card"><div class="card-label">Upstairs High</div><div class="card-value">${fmt(stats.indoorHighRow?.temp_indoor,1)}<span>°F</span></div><div class="card-sub">${stats.indoorHighRow?formatDate(stats.indoorHighRow.recorded_at):'--'}</div></div>
-          <div class="card"><div class="card-label">Upstairs Low</div><div class="card-value">${fmt(stats.indoorLowRow?.temp_indoor,1)}<span>°F</span></div><div class="card-sub">${stats.indoorLowRow?formatDate(stats.indoorLowRow.recorded_at):'--'}</div></div>
-        `:''}
-        ${stats.avgSensor2!=null?`
-          <div class="card"><div class="card-label">Downstairs Avg</div><div class="card-value">${fmt(stats.avgSensor2,1)}<span>°F</span></div></div>
-          <div class="card"><div class="card-label">Downstairs High</div><div class="card-value">${fmt(stats.sensor2HighRow?.temp_sensor2,1)}<span>°F</span></div><div class="card-sub">${stats.sensor2HighRow?formatDate(stats.sensor2HighRow.recorded_at):'--'}</div></div>
-          <div class="card"><div class="card-label">Downstairs Low</div><div class="card-value">${fmt(stats.sensor2LowRow?.temp_sensor2,1)}<span>°F</span></div><div class="card-sub">${stats.sensor2LowRow?formatDate(stats.sensor2LowRow.recorded_at):'--'}</div></div>
-        `:''}
-      </div>`:''}
-      <div class="section-label">Temperature vs Climate Normal <span class="info-tip">?<span class="tip-text">Blue line is your station's actual readings. Orange line is a running average to smooth out the daily swings. The shaded band shows the 30-year normal high/low range from Eugene Airport — if the blue line is above it, it's warmer than average.</span></span></div>
-      <div class="chart-card"><div class="chart-header"><div class="chart-legend"><div class="legend-item"><div class="legend-dot" style="background:var(--chart-temp)"></div>Actual</div><div class="legend-item"><div class="legend-dot" style="background:var(--orange)"></div>Running Avg</div><div class="legend-item"><div class="legend-dot" style="background:var(--orange);opacity:0.2"></div>Normal Range</div></div></div><div class="chart-wrap" style="height:260px"><canvas id="explorerTempChart"></canvas></div></div>
-      <div class="section-label">Precipitation vs Climate Normal <span class="info-tip">?<span class="tip-text">Purple bars show rain rate (how hard it's raining). Green line is your station's cumulative rainfall over the period. Dashed orange line is what Eugene Airport normally gets by that date (30-year average). Green above orange = wetter than normal.</span></span></div>
-      <div class="chart-card"><div class="chart-header"><div class="chart-legend"><div class="legend-item"><div class="legend-dot" style="background:var(--chart-rain)"></div>Rain Rate</div><div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Your Cumulative</div><div class="legend-item"><div class="legend-dot" style="background:var(--orange)"></div>Normal Cumulative</div></div></div><div class="chart-wrap" style="height:260px"><canvas id="explorerRainChart"></canvas></div></div>
-      <div class="section-label">Indoor vs Outdoor Temperature <span class="info-tip">?<span class="tip-text">Shows how outdoor temperature influences your indoor climate. Upstairs is the base station, Downstairs is the wireless sensor. Even with heating/cooling, you can see the outdoor swings reflected indoors.</span></span></div>
-      <div class="chart-card"><div class="chart-header"><div class="chart-legend"><div class="legend-item"><div class="legend-dot" style="background:var(--chart-temp)"></div>Outdoor</div><div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div>Upstairs</div><div class="legend-item"><div class="legend-dot" style="background:var(--purple)"></div>Downstairs</div></div></div><div class="chart-wrap" style="height:260px"><canvas id="explorerIndoorChart"></canvas></div></div>`;
-    renderExplorerChart(rows);
+      <div class="section-title">Ingredients <span style="font-size:0.72rem;color:var(--brown-light);font-family:'DM Sans',sans-serif;font-weight:400">(check to add to shopping list)</span></div>
+      <ul class="ingredient-list">
+        ${ingredients.map(i => {
+          const scaledAmt = i.amount ? parseFloat((i.amount * scale).toFixed(3)).toString().replace(/\.?0+$/, '') : '';
+          return `<li class="ingredient-item">
+            <label>
+              <input type="checkbox" onchange="toggleIngredientToShoppingList(this, '${i.name.replace(/'/g,"\\'")}', ${i.amount ? i.amount * scale : 0}, '${i.unit || ''}', '${r.id}')"/>
+              ${i.name}
+            </label>
+            <span class="ingredient-amount">${scaledAmt ? scaledAmt + ' ' + (i.unit || '') : ''}</span>
+          </li>`;
+        }).join('')}
+      </ul>
+      ${r.directions ? `<div class="section-title">Directions</div><div class="directions-text">${r.directions}</div>` : ''}
+      <div class="detail-actions">
+        <button class="btn-primary" onclick="addAllToShoppingList('${r.id}', ${scale})">Add All to Shopping List</button>
+        <button class="btn-secondary" onclick="startEditRecipe('${r.id}')">Edit Recipe</button>
+        <button class="btn-danger" onclick="deleteRecipe('${r.id}')">Delete</button>
+      </div>
+    `;
   }
-  function renderExplorerChart(rows){
-    if(charts.explorerTemp)charts.explorerTemp.destroy();
-    if(charts.explorerRain)charts.explorerRain.destroy();
-    if(charts.explorerIndoor)charts.explorerIndoor.destroy();
-    const normals = explorerCache.normals || [];
-    const rangeDays=Math.max(1,Math.round((new Date(explorerCache.endVal)-new Date(explorerCache.startVal))/86400000)+1);
-    const chartRows = thinForChart(rows);
-    const labels=chartRows.map(r=>formatTime(r.recorded_at,rangeDays));
-    const s=getComputedStyle(document.documentElement),d=getChartDefaults();
 
-    // Build normals lookup by date (YYYY-MM-DD)
-    const normByDate = {};
-    for (const n of normals) normByDate[n.date] = n;
+  async function deleteRecipe(id) {
+    if (!confirm('Delete this recipe?')) return;
+    await dbDelete('recipes', id);
+    toast('Recipe deleted');
+    showView('recipes');
+  }
 
-    // Map each chart row to its day's normal
-    const normalHigh = chartRows.map(r => { const day = r.recorded_at.substring(0,10); return normByDate[day]?.normal_tmax ?? null; });
-    const normalLow = chartRows.map(r => { const day = r.recorded_at.substring(0,10); return normByDate[day]?.normal_tmin ?? null; });
+  // ── ADD / EDIT RECIPE ────────────────────────────────────
+  const UNIT_OPTIONS = `
+    <optgroup label="Weight"><option value="g">g (grams)</option><option value="oz">oz</option><option value="lb">lb</option></optgroup>
+    <optgroup label="Volume"><option value="cup">cup</option><option value="tbsp">tbsp</option><option value="tsp">tsp</option><option value="fl oz">fl oz</option></optgroup>
+    <optgroup label="Count"><option value="whole">whole</option><option value="medium">medium</option><option value="large">large</option><option value="small">small</option></optgroup>
+    <optgroup label="Other"><option value="other">other</option></optgroup>
+  `;
 
-    // Running average (24-reading window ~2 hours, or longer for multi-day)
-    const windowSize = Math.max(12, Math.min(144, Math.round(chartRows.length / 10)));
-    const runningAvg = chartRows.map((r, i) => {
-      const start = Math.max(0, i - windowSize);
-      const slice = chartRows.slice(start, i + 1).filter(x => x.temp_outdoor != null);
-      return slice.length ? Math.round(slice.reduce((s, x) => s + x.temp_outdoor, 0) / slice.length * 10) / 10 : null;
-    });
+  function startAddRecipe() {
+    editingRecipeId = null;
+    ingredientRows = [];
+    document.getElementById('ingredient-builder').innerHTML = '';
+    document.getElementById('recipe-form-title').textContent = 'New Recipe';
+    document.getElementById('recipe-name').value = '';
+    document.getElementById('recipe-desc').value = '';
+    document.getElementById('recipe-servings').value = 4;
+    document.getElementById('recipe-directions').value = '';
+    document.getElementById('recipe-category').value = '';
+    addIngredientRow();
+    showViewRaw('add-recipe');
+  }
 
-    // Temp chart with normal band + running average
-    const orangeColor = s.getPropertyValue('--orange').trim();
-    charts.explorerTemp=new Chart(document.getElementById('explorerTempChart'),{type:'line',data:{labels,datasets:[
-      {label:'Normal High',data:normalHigh,borderColor:'transparent',backgroundColor:orangeColor+'30',borderWidth:0,pointRadius:0,tension:0.4,fill:'+1',order:3},
-      {label:'Normal Low',data:normalLow,borderColor:'transparent',backgroundColor:'transparent',borderWidth:0,pointRadius:0,tension:0.4,fill:false,order:3},
-      {label:'Running Avg',data:runningAvg,borderColor:orangeColor,borderWidth:2.5,pointRadius:0,tension:0.4,borderDash:[],fill:false,order:1},
-      {label:'Actual',data:chartRows.map(r=>r.temp_outdoor),borderColor:s.getPropertyValue('--chart-temp').trim(),backgroundColor:s.getPropertyValue('--chart-fill').trim(),borderWidth:1.5,pointRadius:0,tension:0.4,fill:false,order:2}
-    ]},options:{...d,scales:{...d.scales,y:{...d.scales.y,ticks:{...d.scales.y.ticks,callback:v=>v+'°F'}}}}});
+  async function startEditRecipe(id) {
+    editingRecipeId = id;
+    await loadCategories();
+    populateCategorySelect('recipe-category');
+    ingredientRows = [];
+    document.getElementById('ingredient-builder').innerHTML = '';
+    document.getElementById('recipe-form-title').textContent = 'Edit Recipe';
 
-    // Rain chart: cumulative actual vs cumulative normal
-    // Build cumulative rain from rain_daily (resets at midnight, so carry over day totals)
-    let carryOver = 0, lastDay = null, lastDailyMax = 0;
-    const accumData = chartRows.map(r => {
-      const day = r.recorded_at.substring(0,10);
-      const rd = r.rain_daily || 0;
-      if (lastDay && day !== lastDay) { carryOver += lastDailyMax; lastDailyMax = 0; }
-      if (rd > lastDailyMax) lastDailyMax = rd;
-      lastDay = day;
-      return Math.round((carryOver + rd) * 100) / 100;
-    });
+    const [recipes, ingredients] = await Promise.all([
+      dbGet('recipes', `id=eq.${id}`),
+      dbGet('ingredients', `recipe_id=eq.${id}&order=name`)
+    ]);
+    const r = recipes[0];
+    document.getElementById('recipe-name').value = r.name;
+    document.getElementById('recipe-desc').value = r.description || '';
+    document.getElementById('recipe-servings').value = r.servings;
+    document.getElementById('recipe-directions').value = r.directions || '';
+    document.getElementById('recipe-category').value = r.category_id || '';
+    if (!ingredients.length) addIngredientRow();
+    else ingredients.forEach(i => addIngredientRow(i));
+    showViewRaw('add-recipe');
+  }
 
-    // Build cumulative normal precip (sum daily normals)
-    let cumNormal = 0;
-    const normalCumByDate = {};
-    const sortedDates = Object.keys(normByDate).sort();
-    for (const date of sortedDates) {
-      cumNormal += (normByDate[date].prcp || 0);
-      normalCumByDate[date] = Math.round(cumNormal * 100) / 100;
-    }
-    const normalCumData = chartRows.map(r => {
-      const day = r.recorded_at.substring(0,10);
-      return normalCumByDate[day] ?? null;
-    });
+  function cancelRecipeForm() {
+    if (editingRecipeId) loadRecipeDetail(editingRecipeId);
+    else showView('recipes');
+  }
 
-    charts.explorerRain=new Chart(document.getElementById('explorerRainChart'),{type:'bar',data:{labels,datasets:[
-      {label:'Rain Rate',data:chartRows.map(r=>r.rain_hourly),backgroundColor:s.getPropertyValue('--chart-rain-light').trim(),borderRadius:2,yAxisID:'y',order:3},
-      {label:'Your Total',data:accumData,borderColor:s.getPropertyValue('--green').trim(),backgroundColor:'transparent',borderWidth:2.5,pointRadius:0,tension:0.4,type:'line',yAxisID:'y1',order:1},
-      {label:'Normal Total',data:normalCumData,borderColor:orangeColor,backgroundColor:'transparent',borderWidth:2,pointRadius:0,tension:0.4,borderDash:[6,3],type:'line',yAxisID:'y1',order:2}
-    ]},options:{...d,scales:{x:d.scales.x,y:{...d.scales.y,position:'left',title:{display:true,text:'Rate (in/hr)',color:s.getPropertyValue('--text-muted').trim(),font:{size:10}},ticks:{...d.scales.y.ticks,callback:v=>v+'"'}},y1:{...d.scales.y,position:'right',grid:{drawOnChartArea:false},title:{display:true,text:'Cumulative (in)',color:s.getPropertyValue('--text-muted').trim(),font:{size:10}},ticks:{...d.scales.y.ticks,callback:v=>v+'"'}}}}});
+  function addIngredientRow(existing = null) {
+    const id = `${Date.now()}${Math.floor(Math.random()*1000)}`;
+    ingredientRows.push(id);
+    const div = document.createElement('div');
+    div.id = `ing-row-${id}`;
+    div.innerHTML = `
+      <div class="ingredient-row">
+        <input type="text" placeholder="Ingredient name" id="ing-name-${id}" value="${existing?.name || ''}" oninput="onIngredientNameInput('${id}')"/>
+        <input type="number" placeholder="Amt" id="ing-amount-${id}" min="0" step="any" value="${existing?.amount || ''}" onchange="onAmountChange('${id}')"/>
+        <select id="ing-unit-${id}" onchange="onUnitChange('${id}')">
+          <option value="" disabled ${!existing?.unit ? 'selected' : ''}>Unit</option>
+          ${UNIT_OPTIONS}
+        </select>
+        <button class="remove-ingredient" onclick="removeIngredientRow('${id}')">×</button>
+      </div>
+      <div class="nutrition-panel ${existing ? 'visible' : ''}" id="ing-panel-${id}">
+        <div id="ing-usda-${id}" class="usda-result"></div>
+        <div class="manual-nutrition-grid" id="ing-manual-${id}" style="${existing ? 'display:grid' : 'display:none'}">
+          <div><label>Calories</label><input type="number" id="ing-cal-${id}" placeholder="0" min="0" value="${existing?.calories || ''}"/></div>
+          <div><label>Protein (g)</label><input type="number" id="ing-pro-${id}" placeholder="0" min="0" step="0.1" value="${existing?.protein_g || ''}"/></div>
+          <div><label>Carbs (g)</label><input type="number" id="ing-carb-${id}" placeholder="0" min="0" step="0.1" value="${existing?.carbs_g || ''}"/></div>
+          <div><label>Fat (g)</label><input type="number" id="ing-fat-${id}" placeholder="0" min="0" step="0.1" value="${existing?.fat_g || ''}"/></div>
+        </div>
+      </div>
+    `;
+    document.getElementById('ingredient-builder').appendChild(div);
+    if (existing?.unit) document.getElementById(`ing-unit-${id}`).value = existing.unit;
+  }
 
-    // Indoor vs Outdoor chart
-    const hasIndoor = chartRows.some(r=>r.temp_indoor!=null) || chartRows.some(r=>r.temp_sensor2!=null);
-    if (hasIndoor && document.getElementById('explorerIndoorChart')) {
-      const indoorDatasets = [
-        {label:'Outdoor',data:chartRows.map(r=>r.temp_outdoor),borderColor:s.getPropertyValue('--chart-temp').trim(),borderWidth:2,pointRadius:0,tension:0.4,fill:false}
-      ];
-      if (chartRows.some(r=>r.temp_indoor!=null)) {
-        indoorDatasets.push({label:'Upstairs',data:chartRows.map(r=>r.temp_indoor),borderColor:s.getPropertyValue('--red').trim(),borderWidth:2,pointRadius:0,tension:0.4,fill:false});
-      }
-      if (chartRows.some(r=>r.temp_sensor2!=null)) {
-        indoorDatasets.push({label:'Downstairs',data:chartRows.map(r=>r.temp_sensor2),borderColor:s.getPropertyValue('--purple').trim(),borderWidth:2,pointRadius:0,tension:0.4,fill:false});
-      }
-      charts.explorerIndoor=new Chart(document.getElementById('explorerIndoorChart'),{type:'line',data:{labels,datasets:indoorDatasets},options:{...d,scales:{...d.scales,y:{...d.scales.y,ticks:{...d.scales.y.ticks,callback:v=>v+'°F'}}}}});
+  function removeIngredientRow(id) {
+    document.getElementById(`ing-row-${id}`)?.remove();
+    ingredientRows = ingredientRows.filter(r => r !== id);
+  }
+
+  function onIngredientNameInput(id) {
+    clearTimeout(lookupTimers[id]);
+    const name = document.getElementById(`ing-name-${id}`).value.trim();
+    const unit = document.getElementById(`ing-unit-${id}`).value;
+    if (unit !== 'g' || name.length < 3) return;
+    lookupTimers[id] = setTimeout(() => fetchUSDA(id, name), 700);
+  }
+
+  function onUnitChange(id) {
+    const unit = document.getElementById(`ing-unit-${id}`).value;
+    const panel = document.getElementById(`ing-panel-${id}`);
+    const usdaEl = document.getElementById(`ing-usda-${id}`);
+    const manualEl = document.getElementById(`ing-manual-${id}`);
+    const name = document.getElementById(`ing-name-${id}`).value.trim();
+    panel.classList.add('visible');
+    if (unit === 'g') {
+      manualEl.style.display = 'none';
+      usdaEl.innerHTML = name.length >= 3 ? '<span style="color:var(--brown-light);font-size:0.8rem">Searching USDA…</span>' : '<span style="color:var(--brown-light);font-size:0.8rem">Type ingredient name to auto-lookup.</span>';
+      if (name.length >= 3) fetchUSDA(id, name);
+    } else {
+      usdaEl.innerHTML = '<span style="color:var(--brown-light);font-size:0.8rem">Enter nutrition from label or estimate:</span>';
+      manualEl.style.display = 'grid';
     }
   }
 
-  // MONTHLY TAB
-  async function loadMonthlyTab(){
-    const tc=document.getElementById('tab-content');
-    if(monthlyCache.data){renderMonthlyTab();return;}
-    tc.innerHTML='<div class="loading">Loading monthly data...</div>';
-    try{
-      const base=`${SUPABASE_URL}/rest/v1/weather_data`,year=new Date().getFullYear(),cm=new Date().getMonth();
-      const monthNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-      const fetches=[];
-      for(let m=0;m<=Math.min(cm,11);m++){
-        const start=new Date(year,m,1).toISOString(),end=new Date(year,m+1,1).toISOString();
-        fetches.push(Promise.all([
-          fetch(`${base}?select=rain_monthly&rain_monthly=not.is.null&recorded_at=gte.${start}&recorded_at=lt.${end}&order=recorded_at.desc&limit=1`,{headers:H}).then(r=>r.json()),
-          fetch(`${base}?select=temp_outdoor&temp_outdoor=not.is.null&recorded_at=gte.${start}&recorded_at=lt.${end}&order=temp_outdoor.desc.nullslast&limit=1`,{headers:H}).then(r=>r.json()),
-          fetch(`${base}?select=temp_outdoor&temp_outdoor=not.is.null&recorded_at=gte.${start}&recorded_at=lt.${end}&order=temp_outdoor.asc.nullslast&limit=1`,{headers:H}).then(r=>r.json()),
-          fetch(`${base}?select=temp_outdoor&temp_outdoor=not.is.null&recorded_at=gte.${start}&recorded_at=lt.${end}&limit=500`,{headers:H}).then(r=>r.json()),
-        ]));
+  function onAmountChange(id) {
+    const unit = document.getElementById(`ing-unit-${id}`).value;
+    if (unit === 'g' && usdaCache[id]) applyUSDAScale(id);
+  }
+
+  async function fetchUSDA(id, name) {
+    const usdaEl = document.getElementById(`ing-usda-${id}`);
+    usdaEl.innerHTML = '<span style="color:var(--brown-light);font-size:0.8rem">Looking up nutrition…</span>';
+    try {
+      const res = await fetch(`https://api.nal.usda.gov/fdc/v1/foods/search?query=${encodeURIComponent(name)}&pageSize=1&api_key=${USDA_KEY}`);
+      const data = await res.json();
+      if (!data.foods?.length) {
+        usdaEl.innerHTML = `<span style="color:var(--brown-light);font-size:0.8rem">No USDA match.</span> <button class="nutrition-toggle" onclick="showManualForRow('${id}')">Enter manually</button>`;
+        return;
       }
-      const[results, eugeneData]=await Promise.all([Promise.all(fetches), fetchEugeneMonthly(year)]);
-      const data=results.map((r,i)=>{const[rainRes,highRes,lowRes,tempsRes]=r;return{month:monthNames[i],rain:rainRes[0]?.rain_monthly??null,high:highRes[0]?.temp_outdoor??null,low:lowRes[0]?.temp_outdoor??null,avgTemp:tempsRes.length?tempsRes.reduce((s,t)=>s+t.temp_outdoor,0)/tempsRes.length:null};});
-      monthlyCache={data,year,eugeneData};renderMonthlyTab();
-    }catch(err){tc.innerHTML=`<div class="error">${err.message}</div>`;}
-  }
-  function renderMonthlyTab(){
-    const{data,year,eugeneData}=monthlyCache;
-    const eMap={};(eugeneData||[]).forEach(e=>{eMap[e.month]=e;});
-    const tableRows=data.map(d=>{const e=eMap[d.month]||{};return`<tr><td>${d.month}</td><td>${fmt(d.rain,2)}</td><td>${fmt(e.rain,2)}</td><td>${fmt(d.avgTemp,1)}</td><td>${fmt(d.high,1)}</td><td>${fmt(d.low,1)}</td><td>${fmt(e.high,0)}</td><td>${fmt(e.low,0)}</td></tr>`;}).join('');
-    document.getElementById('tab-content').innerHTML=`
-      <div class="section-label">Monthly Overview — ${year} <span class="info-tip">?<span class="tip-text">Purple bars = your station. Orange bars = Eugene Airport official totals. Temperature lines compare your station (solid) to official records (dashed). Data from NOAA Climate Data Online.</span></span></div>
-      <div class="charts-grid">
-        <div class="chart-card"><div class="chart-header"><div class="chart-title">Monthly Precipitation</div><div class="chart-legend"><div class="legend-item"><div class="legend-dot" style="background:var(--chart-rain)"></div>Your Station</div><div class="legend-item"><div class="legend-dot" style="background:var(--orange)"></div>Eugene Official</div></div></div><div class="chart-wrap"><canvas id="monthlyRainChart"></canvas></div></div>
-        <div class="chart-card"><div class="chart-header"><div class="chart-title">Monthly Temperature</div><div class="chart-legend"><div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div>Your High</div><div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div>Your Avg</div><div class="legend-item"><div class="legend-dot" style="background:var(--chart-wind)"></div>Your Low</div><div class="legend-item"><div class="legend-dot" style="background:var(--orange);opacity:0.5"></div>Official High/Low</div></div></div><div class="chart-wrap"><canvas id="monthlyTempChart"></canvas></div></div>
-      </div>
-      <div class="monthly-table-wrap"><table class="monthly-table">
-        <thead><tr><th>Month</th><th>Your Rain</th><th>Official Rain</th><th>Avg Temp</th><th>Your High</th><th>Your Low</th><th>Official High</th><th>Official Low</th></tr></thead>
-        <tbody>${tableRows}</tbody>
-      </table></div>`;
-    renderMonthlyCharts(data);
-  }
-  function renderMonthlyCharts(data){
-    if(charts.monthlyRain)charts.monthlyRain.destroy();if(charts.monthlyTemp)charts.monthlyTemp.destroy();
-    const labels=data.map(d=>d.month),s=getComputedStyle(document.documentElement),d=getChartDefaults();
-    const eMap={};(monthlyCache.eugeneData||[]).forEach(e=>{eMap[e.month]=e;});
-    const eugeneRain=labels.map(m=>eMap[m]?.rain??null);
-    const eugeneHigh=labels.map(m=>eMap[m]?.high??null);
-    const eugeneLow=labels.map(m=>eMap[m]?.low??null);
-    charts.monthlyRain=new Chart(document.getElementById('monthlyRainChart'),{type:'bar',data:{labels,datasets:[
-      {label:'Your Station',data:data.map(d=>d.rain),backgroundColor:s.getPropertyValue('--chart-rain-light').trim(),borderColor:s.getPropertyValue('--chart-rain').trim(),borderWidth:1,borderRadius:4},
-      {label:'Eugene Official',data:eugeneRain,backgroundColor:s.getPropertyValue('--orange').trim()+'99',borderColor:s.getPropertyValue('--orange').trim(),borderWidth:1,borderRadius:4}
-    ]},options:{...d,scales:{...d.scales,y:{...d.scales.y,ticks:{...d.scales.y.ticks,callback:v=>v+'"'}}}}});
-    charts.monthlyTemp=new Chart(document.getElementById('monthlyTempChart'),{type:'line',data:{labels,datasets:[
-      {label:'Your High',data:data.map(d=>d.high),borderColor:s.getPropertyValue('--red').trim(),borderWidth:2,pointRadius:3,tension:0.3,fill:false},
-      {label:'Your Avg',data:data.map(d=>d.avgTemp),borderColor:s.getPropertyValue('--accent').trim(),borderWidth:2,pointRadius:3,tension:0.3,fill:false},
-      {label:'Your Low',data:data.map(d=>d.low),borderColor:s.getPropertyValue('--chart-wind').trim(),borderWidth:2,pointRadius:3,tension:0.3,fill:false},
-      {label:'Official High',data:eugeneHigh,borderColor:s.getPropertyValue('--orange').trim(),borderWidth:2,pointRadius:3,tension:0.3,borderDash:[4,3],fill:false},
-      {label:'Official Low',data:eugeneLow,borderColor:s.getPropertyValue('--orange').trim(),borderWidth:1,pointRadius:2,tension:0.3,borderDash:[2,2],fill:false}
-    ]},options:{...d,scales:{...d.scales,y:{...d.scales.y,ticks:{...d.scales.y.ticks,callback:v=>v+'°F'}}}}});
-  }
-
-  // RECORDS TAB
-  async function loadRecordsTab(){
-    const tc=document.getElementById('tab-content');
-    if(recordsCache.records){renderRecordsTab();return;}
-    tc.innerHTML='<div class="loading">Loading records...</div>';
-    try{
-      const base=`${SUPABASE_URL}/rest/v1/weather_data`;
-      const[records,ytd,thisDay,indoorHighR,indoorLowR,sensor2HighR,sensor2LowR]=await Promise.all([
-        fetchRecords(),fetchYTD(),fetchEugeneThisDay(),
-        fetch(`${base}?select=temp_indoor,recorded_at&temp_indoor=not.is.null&order=temp_indoor.desc.nullslast&limit=1`,{headers:H}).then(r=>r.json()),
-        fetch(`${base}?select=temp_indoor,recorded_at&temp_indoor=not.is.null&order=temp_indoor.asc.nullslast&limit=1`,{headers:H}).then(r=>r.json()),
-        fetch(`${base}?select=temp_sensor2,recorded_at&temp_sensor2=not.is.null&order=temp_sensor2.desc.nullslast&limit=1`,{headers:H}).then(r=>r.json()),
-        fetch(`${base}?select=temp_sensor2,recorded_at&temp_sensor2=not.is.null&order=temp_sensor2.asc.nullslast&limit=1`,{headers:H}).then(r=>r.json()),
-      ]);
-      const latestRes=await fetch(`${base}?order=recorded_at.desc&limit=1`,{headers:H});
-      const latest=(await latestRes.json())[0];
-      const indoorRecords={
-        upHigh:indoorHighR[0]||null, upLow:indoorLowR[0]||null,
-        downHigh:sensor2HighR[0]||null, downLow:sensor2LowR[0]||null
-      };
-      recordsCache={records,ytd,latest,thisDay,indoorRecords};renderRecordsTab();
-    }catch(err){tc.innerHTML=`<div class="error">${err.message}</div>`;}
-  }
-  function renderRecordsTab(){
-    const{records,ytd,latest,thisDay,indoorRecords}=recordsCache;
-    const ir=indoorRecords||{};
-    const mmdd=new Date().toLocaleDateString([],{month:'long',day:'numeric'});
-    let thisDayHtml='';
-    if(thisDay&&thisDay.length){
-      const rows=thisDay.map(d=>`<tr><td>${d.date.substring(0,4)}</td><td>${fmt(d.tmax,0)}</td><td>${fmt(d.tmin,0)}</td><td>${fmt(d.prcp,2)}</td><td>${fmt(d.normal_tmax,0)}</td><td>${fmt(d.normal_tmin,0)}</td></tr>`).join('');
-      thisDayHtml=`<div class="section-label">This Day in History — ${mmdd} (Eugene Airport) <span class="info-tip">?<span class="tip-text">Official high, low, and rainfall recorded at Eugene Airport on this calendar date in previous years. "Normal" is the 30-year average (1981-2010) for this date. Data from NOAA.</span></span></div>
-        <div class="monthly-table-wrap"><table class="monthly-table">
-        <thead><tr><th>Year</th><th>High (°F)</th><th>Low (°F)</th><th>Rain (in)</th><th>Normal High</th><th>Normal Low</th></tr></thead>
-        <tbody>${rows}</tbody>
-      </table></div>`;
+      const food = data.foods[0];
+      const get = n => food.foodNutrients?.find(x => x.nutrientName === n)?.value || 0;
+      const per100 = { cals: get('Energy'), protein: get('Protein'), carbs: get('Carbohydrate, by difference'), fat: get('Total lipid (fat)') };
+      usdaCache[id] = per100;
+      usdaEl.innerHTML = `
+        <span style="color:var(--brown-light);font-size:0.78rem">USDA: <b>${food.description}</b> — per 100g: ${Math.round(per100.cals)} cal · ${per100.protein.toFixed(1)}g protein · ${per100.carbs.toFixed(1)}g carbs · ${per100.fat.toFixed(1)}g fat</span><br>
+        <button class="apply-btn" onclick="applyUSDAScale('${id}')">✓ Calculate for my amount</button>
+        <button class="nutrition-toggle" style="margin-left:8px" onclick="showManualForRow('${id}')">Enter manually instead</button>
+      `;
+    } catch {
+      usdaEl.innerHTML = `<span style="color:var(--brown-light);font-size:0.8rem">Lookup failed.</span> <button class="nutrition-toggle" onclick="showManualForRow('${id}')">Enter manually</button>`;
     }
-    document.getElementById('tab-content').innerHTML=`
-      <div class="section-label">All-Time Records <span class="info-tip">?<span class="tip-text">The most extreme readings ever recorded by your personal weather station. These update automatically as new records are set.</span></span></div>
-      <div class="records-grid">
-        <div class="record-card"><div class="card-label">Hottest</div><div class="record-value">${fmt(records.hot?.temp_outdoor,1)}<span>°F</span></div><div class="record-date">${records.hot?formatDate(records.hot.recorded_at):'--'}</div></div>
-        <div class="record-card"><div class="card-label">Coldest</div><div class="record-value">${fmt(records.cold?.temp_outdoor,1)}<span>°F</span></div><div class="record-date">${records.cold?formatDate(records.cold.recorded_at):'--'}</div></div>
-        <div class="record-card"><div class="card-label">Rainiest Day</div><div class="record-value">${fmt(records.rain?.rain_daily,2)}<span> in</span></div><div class="record-date">${records.rain?formatDate(records.rain.recorded_at):'--'}</div></div>
-        <div class="record-card"><div class="card-label">Strongest Gust</div><div class="record-value">${fmt(records.gust?.wind_gust,1)}<span> mph</span></div><div class="record-date">${records.gust?formatDate(records.gust.recorded_at):'--'}</div></div>
-      </div>
-      <div class="section-label">Rainfall Totals</div>
-      <div class="rain-grid">
-        <div class="rain-card"><div class="card-label">Today</div><div class="record-value">${fmt(latest?.rain_daily,2)}<span> in</span></div><div class="record-date">Last hour: ${fmt(latest?.rain_hourly,2)} in</div></div>
-        <div class="rain-card"><div class="card-label">This Week</div><div class="record-value">${fmt(latest?.rain_weekly,2)}<span> in</span></div></div>
-        <div class="rain-card"><div class="card-label">This Month</div><div class="record-value">${fmt(latest?.rain_monthly,2)}<span> in</span></div></div>
-        <div class="rain-card"><div class="card-label">YTD ${new Date().getFullYear()}</div><div class="record-value">${ytd}<span> in</span></div></div>
-      </div>
-      <div class="section-label">Indoor Records <span class="info-tip">?<span class="tip-text">All-time indoor temperature extremes from the base station (Upstairs) and wireless sensor (Downstairs). Downstairs data starts April 2026.</span></span></div>
-      <div class="records-grid">
-        <div class="record-card"><div class="card-label">Upstairs High</div><div class="record-value">${fmt(ir.upHigh?.temp_indoor,1)}<span>°F</span></div><div class="record-date">${ir.upHigh?formatDate(ir.upHigh.recorded_at):'--'}</div></div>
-        <div class="record-card"><div class="card-label">Upstairs Low</div><div class="record-value">${fmt(ir.upLow?.temp_indoor,1)}<span>°F</span></div><div class="record-date">${ir.upLow?formatDate(ir.upLow.recorded_at):'--'}</div></div>
-        ${ir.downHigh?`<div class="record-card"><div class="card-label">Downstairs High</div><div class="record-value">${fmt(ir.downHigh.temp_sensor2,1)}<span>°F</span></div><div class="record-date">${formatDate(ir.downHigh.recorded_at)}</div></div>`:''}
-        ${ir.downLow?`<div class="record-card"><div class="card-label">Downstairs Low</div><div class="record-value">${fmt(ir.downLow.temp_sensor2,1)}<span>°F</span></div><div class="record-date">${formatDate(ir.downLow.recorded_at)}</div></div>`:''}
-      </div>
-      ${thisDayHtml}`;
   }
 
-  // INIT
-  loadLiveTab();
-  setInterval(()=>{if(activeTab==='live')loadLiveTab();},5*60*1000);
+  function applyUSDAScale(id) {
+    const per100 = usdaCache[id];
+    if (!per100) return;
+    const amount = parseFloat(document.getElementById(`ing-amount-${id}`).value) || 0;
+    if (!amount) { toast('Enter an amount in grams first'); return; }
+    const scale = amount / 100;
+    const cals = Math.round(per100.cals * scale);
+    const protein = (per100.protein * scale).toFixed(1);
+    const carbs = (per100.carbs * scale).toFixed(1);
+    const fat = (per100.fat * scale).toFixed(1);
+    document.getElementById(`ing-cal-${id}`).value = cals;
+    document.getElementById(`ing-pro-${id}`).value = protein;
+    document.getElementById(`ing-carb-${id}`).value = carbs;
+    document.getElementById(`ing-fat-${id}`).value = fat;
+    document.getElementById(`ing-manual-${id}`).style.display = 'grid';
+    document.getElementById(`ing-usda-${id}`).innerHTML = `<span style="color:var(--sage);font-size:0.78rem">✓ ${amount}g → ${cals} cal · ${protein}g protein · ${carbs}g carbs · ${fat}g fat</span> <button class="nutrition-toggle" onclick="applyUSDAScale('${id}')">Recalculate</button>`;
+  }
+
+  function showManualForRow(id) {
+    document.getElementById(`ing-panel-${id}`).classList.add('visible');
+    document.getElementById(`ing-manual-${id}`).style.display = 'grid';
+  }
+
+  async function saveRecipe() {
+    const name = document.getElementById('recipe-name').value.trim();
+    if (!name) { toast('Please enter a recipe name'); return; }
+    const body = {
+      name,
+      description: document.getElementById('recipe-desc').value.trim(),
+      servings: parseInt(document.getElementById('recipe-servings').value) || 1,
+      directions: document.getElementById('recipe-directions').value.trim(),
+      category_id: document.getElementById('recipe-category').value || null
+    };
+    let recipeId = editingRecipeId;
+    if (recipeId) {
+      await dbPatch('recipes', recipeId, body);
+      const old = await dbGet('ingredients', `recipe_id=eq.${recipeId}`);
+      for (const i of old) await dbDelete('ingredients', i.id);
+    } else {
+      const result = await dbPost('recipes', body);
+      recipeId = result[0]?.id;
+      if (!recipeId) { toast('Error saving recipe'); return; }
+    }
+    for (const id of ingredientRows) {
+      const nameEl = document.getElementById(`ing-name-${id}`);
+      if (!nameEl) continue;
+      const ingName = nameEl.value.trim();
+      if (!ingName) continue;
+      await dbPost('ingredients', {
+        recipe_id: recipeId,
+        name: ingName,
+        amount: parseFloat(document.getElementById(`ing-amount-${id}`).value) || null,
+        unit: document.getElementById(`ing-unit-${id}`).value || null,
+        calories: parseFloat(document.getElementById(`ing-cal-${id}`)?.value) || 0,
+        protein_g: parseFloat(document.getElementById(`ing-pro-${id}`)?.value) || 0,
+        carbs_g: parseFloat(document.getElementById(`ing-carb-${id}`)?.value) || 0,
+        fat_g: parseFloat(document.getElementById(`ing-fat-${id}`)?.value) || 0
+      });
+    }
+    toast(editingRecipeId ? 'Recipe updated! ✓' : 'Recipe saved! 🎉');
+    if (editingRecipeId) loadRecipeDetail(recipeId);
+    else showView('recipes');
+  }
+
+  // ── BULK IMPORT ──────────────────────────────────────────
+  async function initBulkImport() {
+    await loadCategories();
+    populateCategorySelect('bulk-category');
+    document.getElementById('bulk-names').value = '';
+    showViewRaw('bulk-import');
+  }
+
+  async function runBulkImport() {
+    const raw = document.getElementById('bulk-names').value.trim();
+    if (!raw) { toast('Please enter at least one recipe name'); return; }
+    const names = raw.split('\n').map(n => n.trim()).filter(Boolean);
+    const categoryId = document.getElementById('bulk-category').value || null;
+    for (const name of names) {
+      await dbPost('recipes', { name, servings: 4, category_id: categoryId });
+    }
+    toast(`${names.length} recipe${names.length !== 1 ? 's' : ''} imported! 🎉`);
+    showView('recipes');
+  }
+
+  // ── SHOPPING LIST ────────────────────────────────────────
+  let currentShoppingTab = 'list';
+
+  function switchShoppingTab(tab) {
+    currentShoppingTab = tab;
+    document.getElementById('shopping-tab-list').style.display = tab === 'list' ? 'block' : 'none';
+    document.getElementById('shopping-tab-staples').style.display = tab === 'staples' ? 'block' : 'none';
+    document.getElementById('tab-list').classList.toggle('active', tab === 'list');
+    document.getElementById('tab-staples').classList.toggle('active', tab === 'staples');
+    document.getElementById('clear-checked-btn').style.display = tab === 'list' ? '' : 'none';
+    if (tab === 'staples') renderStaples();
+  }
+
+  async function loadShopping() {
+    allStores = await dbGet('stores', 'order=name');
+    allSections = await dbGet('store_sections', 'order=sort_order');
+    if (!currentStoreId && allStores.length) currentStoreId = allStores[0].id;
+    renderStoreSelector();
+    await renderShoppingList();
+  }
+
+  function renderStoreSelector() {
+    const el = document.getElementById('store-selector');
+    if (!allStores.length) {
+      el.innerHTML = `<span style="font-size:0.82rem;color:var(--brown-light)">No stores set up yet. <a href="settings.html" style="color:var(--accent)">Add stores in Settings →</a></span>`;
+      return;
+    }
+    el.innerHTML = allStores.map(s =>
+      `<button class="store-btn ${currentStoreId === s.id ? 'active' : ''}" onclick="selectStore('${s.id}')">${s.name}</button>`
+    ).join('');
+  }
+
+  function selectStore(id) {
+    currentStoreId = id;
+    renderStoreSelector();
+    if (currentShoppingTab === 'list') renderShoppingList();
+    else renderStaples();
+  }
+
+  async function renderShoppingList() {
+    const el = document.getElementById('shopping-content');
+    const items = await dbGet('shopping_list', 'order=checked.asc,created_at.asc');
+    if (!items.length) {
+      el.innerHTML = `<div class="empty-state"><div class="icon">🛒</div><p>Your shopping list is empty.<br>Add items from a recipe or manually.</p></div>`;
+      return;
+    }
+    const storeSections = currentStoreId ? allSections.filter(s => s.store_id === currentStoreId) : [];
+    const sectionMap = {};
+    const unsectioned = [];
+    items.forEach(item => {
+      const sec = storeSections.find(s => s.id === item.section_id);
+      if (sec) {
+        if (!sectionMap[sec.id]) sectionMap[sec.id] = { section: sec, items: [] };
+        sectionMap[sec.id].items.push(item);
+      } else unsectioned.push(item);
+    });
+    let html = '';
+    storeSections.forEach(sec => {
+      if (sectionMap[sec.id]?.items.length) {
+        html += `<div class="shopping-section-header">${sec.name}</div>`;
+        html += renderItems(sectionMap[sec.id].items, storeSections);
+      }
+    });
+    if (unsectioned.length) {
+      if (storeSections.length) html += `<div class="shopping-section-header">Other</div>`;
+      html += renderItems(unsectioned, storeSections);
+    }
+    el.innerHTML = html;
+  }
+
+  function renderItems(items, storeSections = []) {
+    return [...items.filter(i => !i.checked), ...items.filter(i => i.checked)].map(i => {
+      const sec = storeSections.find(s => s.id === i.section_id);
+      const tagLabel = sec ? sec.name : 'Assign section';
+      const tagClass = sec ? 'section-tag' : 'section-tag unassigned';
+      return `
+      <div class="shopping-item ${i.checked ? 'checked' : ''}">
+        <input type="checkbox" ${i.checked ? 'checked' : ''} onchange="toggleShoppingItem('${i.id}', this.checked)"/>
+        <span class="shopping-item-name">${i.name}</span>
+        ${i.amount ? `<span class="shopping-item-amount">${i.amount}${i.unit ? ' ' + i.unit : ''}</span>` : ''}
+        <span class="${tagClass}" onclick="openSectionPicker(event, '${i.id}', '${i.name.replace(/'/g, "\\'")}', 'list')">${tagLabel}</span>
+        <button class="remove-item-btn" onclick="removeShoppingItem('${i.id}')">×</button>
+      </div>`;
+    }).join('');
+  }
+
+  // ── SECTION PICKER ───────────────────────────────────────
+  let pickerItemId = null;
+  let pickerContext = 'list';
+
+  function openSectionPicker(event, itemId, itemName, context) {
+    event.stopPropagation();
+    pickerItemId = itemId;
+    pickerContext = context;
+    const storeSections = currentStoreId ? allSections.filter(s => s.store_id === currentStoreId) : [];
+    const picker = document.getElementById('section-picker');
+    const optionsEl = document.getElementById('section-picker-options');
+
+    if (!storeSections.length) {
+      optionsEl.innerHTML = `<div class="section-picker-option" style="color:var(--brown-light);font-size:0.85rem">No sections for this store.<br><a href="settings.html" style="color:var(--accent)">Set up in Settings</a></div>`;
+    } else {
+      optionsEl.innerHTML =
+        `<div class="section-picker-option" onclick="assignSection(null, null, '${itemName.replace(/'/g, "\\'")}')">No section</div>` +
+        storeSections.map(s =>
+          `<div class="section-picker-option" onclick="assignSection('${s.id}', '${s.name.replace(/'/g,"\\'")}', '${itemName.replace(/'/g,"\\'")}')">
+            ${s.name}
+          </div>`
+        ).join('');
+    }
+
+    const rect = event.target.getBoundingClientRect();
+    picker.style.display = 'block';
+    picker.style.top = (rect.bottom + window.scrollY + 4) + 'px';
+    picker.style.left = Math.min(rect.left, window.innerWidth - 200) + 'px';
+  }
+
+  async function assignSection(sectionId, sectionName, ingredientName) {
+    document.getElementById('section-picker').style.display = 'none';
+    if (!pickerItemId) return;
+
+    if (pickerContext === 'list') {
+      await dbPatch('shopping_list', pickerItemId, { section_id: sectionId });
+    } else {
+      await dbPatch('staples', pickerItemId, { section_id: sectionId });
+    }
+
+    // Save to memory so future adds auto-assign
+    if (ingredientName && currentStoreId && sectionId) {
+      const existing = await dbGet('ingredient_section_memory',
+        `ingredient_name=eq.${encodeURIComponent(ingredientName)}&store_id=eq.${currentStoreId}`);
+      if (existing.length) {
+        await dbPatch('ingredient_section_memory', existing[0].id, { section_id: sectionId });
+      } else {
+        await dbPost('ingredient_section_memory', { ingredient_name: ingredientName, store_id: currentStoreId, section_id: sectionId });
+      }
+    }
+
+    if (pickerContext === 'list') renderShoppingList();
+    else renderStaples();
+    toast(sectionName ? `Moved to ${sectionName}` : 'Section cleared');
+  }
+
+  document.addEventListener('click', () => {
+    const picker = document.getElementById('section-picker');
+    if (picker) picker.style.display = 'none';
+  });
+
+  async function toggleShoppingItem(id, checked) {
+    await dbPatch('shopping_list', id, { checked });
+    renderShoppingList();
+  }
+
+  async function removeShoppingItem(id) {
+    await dbDelete('shopping_list', id);
+    renderShoppingList();
+  }
+
+  async function clearChecked() {
+    const items = await dbGet('shopping_list', 'checked=eq.true');
+    for (const i of items) await dbDelete('shopping_list', i.id);
+    toast('Cleared checked items');
+    renderShoppingList();
+  }
+
+  async function getSectionMemory(name) {
+    if (!currentStoreId) return null;
+    try {
+      const mem = await dbGet('ingredient_section_memory',
+        `ingredient_name=eq.${encodeURIComponent(name)}&store_id=eq.${currentStoreId}`);
+      return mem[0]?.section_id || null;
+    } catch { return null; }
+  }
+
+  async function addManualItem() {
+    const name = document.getElementById('manual-item').value.trim();
+    if (!name) return;
+    const amount = document.getElementById('manual-amount').value.trim();
+    const sectionId = await getSectionMemory(name);
+    await dbPost('shopping_list', { name, amount: amount || null, store_id: currentStoreId || null, section_id: sectionId });
+    document.getElementById('manual-item').value = '';
+    document.getElementById('manual-amount').value = '';
+    toast('Added to list');
+    renderShoppingList();
+  }
+
+  async function toggleIngredientToShoppingList(checkbox, name, amount, unit, recipeId) {
+    if (checkbox.checked) {
+      const sectionId = await getSectionMemory(name);
+      await dbPost('shopping_list', { name, amount: amount || null, unit: unit || null, recipe_id: recipeId, store_id: currentStoreId || null, section_id: sectionId });
+      toast(`${name} added to list`);
+    }
+  }
+
+  async function addAllToShoppingList(recipeId, scale = 1) {
+    const ingredients = await dbGet('ingredients', `recipe_id=eq.${recipeId}`);
+    for (const i of ingredients) {
+      const sectionId = await getSectionMemory(i.name);
+      const scaledAmt = i.amount ? parseFloat((i.amount * scale).toFixed(2)) : null;
+      await dbPost('shopping_list', { name: i.name, amount: scaledAmt, unit: i.unit, recipe_id: recipeId, store_id: currentStoreId || null, section_id: sectionId });
+    }
+    toast('All ingredients added to list 🛒');
+  }
+
+  // ── STAPLES ──────────────────────────────────────────────
+  async function renderStaples() {
+    const el = document.getElementById('staples-content');
+    if (!currentStoreId) {
+      el.innerHTML = `<div class="empty-state"><div class="icon">⭐</div><p>Select a store above to manage its staples.</p></div>`;
+      return;
+    }
+    const staples = await dbGet('staples', `store_id=eq.${currentStoreId}&order=name`);
+    const storeSections = allSections.filter(s => s.store_id === currentStoreId);
+
+    if (!staples.length) {
+      el.innerHTML = `<div class="empty-state"><div class="icon">⭐</div><p>No staples yet for this store.<br>Add your regular weekly items below.</p></div>`;
+      return;
+    }
+
+    const sectionMap = {};
+    const unsectioned = [];
+    staples.forEach(item => {
+      const sec = storeSections.find(s => s.id === item.section_id);
+      if (sec) {
+        if (!sectionMap[sec.id]) sectionMap[sec.id] = { section: sec, items: [] };
+        sectionMap[sec.id].items.push(item);
+      } else unsectioned.push(item);
+    });
+
+    let html = '';
+    storeSections.forEach(sec => {
+      if (sectionMap[sec.id]?.items.length) {
+        html += `<div class="shopping-section-header">${sec.name}</div>`;
+        html += renderStapleItems(sectionMap[sec.id].items, storeSections);
+      }
+    });
+    if (unsectioned.length) {
+      if (storeSections.length) html += `<div class="shopping-section-header">Other</div>`;
+      html += renderStapleItems(unsectioned, storeSections);
+    }
+    el.innerHTML = html;
+  }
+
+  function renderStapleItems(items, storeSections = []) {
+    return items.map(i => {
+      const sec = storeSections.find(s => s.id === i.section_id);
+      const tagLabel = sec ? sec.name : 'Assign section';
+      const tagClass = sec ? 'section-tag' : 'section-tag unassigned';
+      return `
+      <div class="staple-item">
+        <span class="staple-item-name">${i.name}</span>
+        ${i.amount ? `<span class="staple-amount">${i.amount}${i.unit ? ' ' + i.unit : ''}</span>` : ''}
+        <span class="${tagClass}" onclick="openSectionPicker(event, '${i.id}', '${i.name.replace(/'/g,"\\'")}', 'staple')">${tagLabel}</span>
+        <button class="add-staple-btn" onclick="addStapleToList('${i.id}')" title="Add to list">+</button>
+        <button class="delete-staple-btn" onclick="deleteStaple('${i.id}')">×</button>
+      </div>`;
+    }).join('');
+  }
+
+  async function addStaple() {
+    const name = document.getElementById('staple-name').value.trim();
+    if (!name || !currentStoreId) { toast('Enter a name and select a store'); return; }
+    const amount = document.getElementById('staple-amount').value.trim();
+    const sectionId = await getSectionMemory(name);
+    await dbPost('staples', { name, amount: amount || null, store_id: currentStoreId, section_id: sectionId });
+    document.getElementById('staple-name').value = '';
+    document.getElementById('staple-amount').value = '';
+    toast('Staple saved ⭐');
+    renderStaples();
+  }
+
+  async function deleteStaple(id) {
+    await dbDelete('staples', id);
+    renderStaples();
+  }
+
+  async function addStapleToList(stapleId) {
+    const staples = await dbGet('staples', `id=eq.${stapleId}`);
+    const s = staples[0];
+    if (!s) return;
+    await dbPost('shopping_list', { name: s.name, amount: s.amount, unit: s.unit, store_id: currentStoreId, section_id: s.section_id });
+    toast(`${s.name} added to list`);
+  }
+
+  async function addAllStaplesToList() {
+    if (!currentStoreId) { toast('Select a store first'); return; }
+    const staples = await dbGet('staples', `store_id=eq.${currentStoreId}`);
+    if (!staples.length) { toast('No staples saved for this store'); return; }
+    for (const s of staples) {
+      await dbPost('shopping_list', { name: s.name, amount: s.amount, unit: s.unit, store_id: currentStoreId, section_id: s.section_id });
+    }
+    toast(`${staples.length} staples added to list 🛒`);
+    switchShoppingTab('list');
+  }
+
+  // ── INIT ─────────────────────────────────────────────────
+  loadRecipes();
 </script>
 </body>
 </html>
