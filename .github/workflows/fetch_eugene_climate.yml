@@ -1,13 +1,8 @@
 name: Fetch Eugene Climate Data
 
 on:
-  schedule:
-    - cron: '15 14 * * *'  # runs daily at 7:15 AM Pacific (14:15 UTC)
-  workflow_dispatch:  # allows manual trigger
+  workflow_dispatch:  # manual trigger only — ArtCentered/Weather-Station runs the daily fetch into the shared table
 
-# GitHub disables scheduled workflows in public repos after 60 days without a
-# commit. The keepalive step below re-enables this workflow via the API on every
-# run, which resets that timer — so the workflow stays on without junk commits.
 permissions:
   contents: read
   actions: write
