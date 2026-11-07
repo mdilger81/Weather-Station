@@ -1,0 +1,33 @@
+name: Fetch Eugene Climate Data
+
+on:
+  workflow_dispatch:  # manual trigger only — ArtCentered/Weather-Station runs the daily fetch into the shared table
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Fetch Eugene climate data
+        env:
+          NOAA_TOKEN: ${{ secrets.NOAA_TOKEN }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: python fetch_eugene_climate.py
+
+      - name: Keep workflow alive
+        if: always()  # reset the inactivity timer even if the NOAA fetch fails
+        uses: liskin/gh-workflow-keepalive@f72ff1a1336129f29bf0166c0fd0ca6cf1bcb38c  # v1.2.1
